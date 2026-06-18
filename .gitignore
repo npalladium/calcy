@@ -1,0 +1,17 @@
+node_modules/
+.svelte-kit/
+build/
+.DS_Store
+
+# Stryker
+.stryker-tmp/
+reports/
+stryker.log
+
+# Playwright
+test-results/
+playwright-report/
+.playwright/
+
+*storybook.log
+storybook-static

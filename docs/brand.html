@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>calcy — brand sheet</title>
+		<style>
+			:root {
+				/* ink — deep indigo, near-black */
+				--ink-0: #0a0a12;
+				--ink-1: #11101c;
+				--ink-2: #1a1830;
+				--ink-3: #272445;
+				/* brand violet + one warm accent */
+				--violet: #8a7cff;
+				--violet-soft: #c4b1ff;
+				--violet-deep: #5b4fd6;
+				--warm: #ffb27a;
+				/* semantic (the result colour-code) */
+				--green: #7ee0a0;
+				--blue: #7fc8ff;
+				--red: #ff8a8a;
+				/* text */
+				--text: #ecebf6;
+				--text-dim: #9a97b5;
+				--font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+				--font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			html {
+				-webkit-text-size-adjust: 100%;
+			}
+			body {
+				margin: 0;
+				background:
+					radial-gradient(900px 500px at 80% -10%, #1a1636 0%, transparent 60%),
+					var(--ink-0);
+				color: var(--text);
+				font-family: var(--font-sans);
+				line-height: 1.55;
+				-webkit-font-smoothing: antialiased;
+			}
+			.wrap {
+				max-width: 940px;
+				margin: 0 auto;
+				padding: clamp(1.25rem, 4vw, 3rem);
+			}
+			h1,
+			h2,
+			h3 {
+				line-height: 1.15;
+				margin: 0;
+				letter-spacing: -0.02em;
+			}
+			.eyebrow {
+				font-size: 0.72rem;
+				text-transform: uppercase;
+				letter-spacing: 0.16em;
+				color: var(--violet-soft);
+				font-weight: 600;
+			}
+			section {
+				margin-top: clamp(2.5rem, 6vw, 4.5rem);
+			}
+			.sec-head {
+				border-top: 1px solid var(--ink-3);
+				padding-top: 1.1rem;
+				margin-bottom: 1.4rem;
+			}
+			.sec-head h2 {
+				font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+			}
+			.sec-head p {
+				margin: 0.4rem 0 0;
+				color: var(--text-dim);
+				max-width: 56ch;
+				font-size: 0.95rem;
+			}
+			.muted {
+				color: var(--text-dim);
+			}
+			code,
+			.mono {
+				font-family: var(--font-mono);
+			}
+
+			/* ---------- hero ---------- */
+			.hero {
+				display: flex;
+				gap: clamp(1.25rem, 4vw, 2.5rem);
+				align-items: center;
+				flex-wrap: wrap;
+			}
+			.hero .mark {
+				width: clamp(96px, 22vw, 140px);
+				height: clamp(96px, 22vw, 140px);
+				flex-shrink: 0;
+				border-radius: 26%;
+				box-shadow:
+					0 18px 50px -18px var(--violet-deep),
+					inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+			}
+			.hero h1 {
+				font-size: clamp(2.6rem, 9vw, 4.2rem);
+				font-weight: 680;
+			}
+			.hero .dot {
+				color: var(--warm);
+			}
+			.pron {
+				margin: 0.35rem 0 0;
+				color: var(--text-dim);
+				font-size: 0.9rem;
+			}
+			.pron .ipa {
+				font-family: var(--font-mono);
+				color: var(--violet-soft);
+			}
+			.tagline {
+				font-size: clamp(1.05rem, 2.6vw, 1.4rem);
+				color: var(--text);
+				margin: 0.5rem 0 0;
+				font-weight: 400;
+			}
+			.tag-alts {
+				margin: 0.9rem 0 0;
+				color: var(--text-dim);
+				font-size: 0.9rem;
+			}
+			.tag-alts span {
+				color: var(--violet-soft);
+			}
+
+			/* ---------- logo lockups ---------- */
+			.logos {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+				gap: 1rem;
+			}
+			.tile {
+				background: var(--ink-1);
+				border: 1px solid var(--ink-3);
+				border-radius: 14px;
+				padding: 1.25rem;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				gap: 0.8rem;
+				min-height: 150px;
+			}
+			.tile.light {
+				background: #f5f3ff;
+			}
+			.tile .cap {
+				font-size: 0.72rem;
+				color: var(--text-dim);
+			}
+			.tile.light .cap {
+				color: #6b6790;
+			}
+			.wordmark {
+				font-size: 1.7rem;
+				font-weight: 680;
+				letter-spacing: -0.03em;
+			}
+			.wordmark.on-light {
+				color: #1a1830;
+			}
+			.wordmark .dot {
+				color: var(--warm);
+			}
+
+			/* ---------- palette ---------- */
+			.swatches {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+				gap: 0.75rem;
+			}
+			.sw {
+				border-radius: 12px;
+				border: 1px solid var(--ink-3);
+				overflow: hidden;
+				background: var(--ink-1);
+			}
+			.sw .chip {
+				height: 64px;
+			}
+			.sw .meta {
+				padding: 0.55rem 0.7rem;
+			}
+			.sw .name {
+				font-weight: 600;
+				font-size: 0.85rem;
+			}
+			.sw .hex {
+				font-family: var(--font-mono);
+				font-size: 0.78rem;
+				color: var(--text-dim);
+			}
+			.sw .use {
+				font-size: 0.74rem;
+				color: var(--text-dim);
+				margin-top: 0.15rem;
+			}
+
+			/* ---------- semantic demo ---------- */
+			.demo {
+				background: var(--ink-1);
+				border: 1px solid var(--ink-3);
+				border-radius: 14px;
+				padding: 1rem 1.1rem;
+				font-family: var(--font-mono);
+				font-size: 0.9rem;
+				overflow-x: auto;
+			}
+			.demo .row {
+				display: flex;
+				gap: 1rem;
+				padding: 0.28rem 0;
+				white-space: nowrap;
+			}
+			.demo .expr {
+				color: var(--text-dim);
+				min-width: 20ch;
+			}
+			.demo .arrow {
+				color: var(--ink-3);
+			}
+			.v-value {
+				color: var(--green);
+			}
+			.v-rate {
+				color: var(--blue);
+			}
+			.v-dist {
+				color: var(--violet-soft);
+			}
+			.v-err {
+				color: var(--red);
+			}
+			.legend {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.4rem 1.1rem;
+				margin-top: 0.9rem;
+				font-size: 0.8rem;
+				color: var(--text-dim);
+			}
+			.legend b {
+				font-weight: 600;
+			}
+
+			/* ---------- type ---------- */
+			.type-row {
+				display: flex;
+				align-items: baseline;
+				gap: 1rem;
+				padding: 0.5rem 0;
+				border-bottom: 1px solid var(--ink-2);
+				flex-wrap: wrap;
+			}
+			.type-row .lbl {
+				width: 9ch;
+				flex-shrink: 0;
+				font-size: 0.72rem;
+				color: var(--text-dim);
+				font-family: var(--font-mono);
+			}
+
+			/* ---------- voice ---------- */
+			.voice {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+				gap: 1rem;
+			}
+			.vcard {
+				border: 1px solid var(--ink-3);
+				border-radius: 14px;
+				padding: 1.1rem 1.2rem;
+				background: var(--ink-1);
+			}
+			.vcard .do,
+			.vcard .dont {
+				display: flex;
+				gap: 0.6rem;
+				align-items: flex-start;
+				margin-top: 0.6rem;
+				font-size: 0.92rem;
+			}
+			.vcard .do .ico {
+				color: var(--green);
+			}
+			.vcard .dont .ico {
+				color: var(--red);
+			}
+			.vcard .dont {
+				color: var(--text-dim);
+			}
+			.vcard h3 {
+				font-size: 0.95rem;
+				color: var(--violet-soft);
+			}
+			footer {
+				margin-top: 4rem;
+				padding-top: 1.2rem;
+				border-top: 1px solid var(--ink-3);
+				color: var(--text-dim);
+				font-size: 0.82rem;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<!-- ======================= HERO ======================= -->
+			<p class="eyebrow">Brand sheet</p>
+			<div class="hero" style="margin-top: 0.6rem">
+				<!-- THE MARK: a 90% interval under a soft bell curve, warm median dot -->
+				<svg
+					class="mark"
+					viewBox="0 0 512 512"
+					role="img"
+					aria-label="calcy app icon: a distribution curve with its likely range"
+				>
+					<defs>
+						<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+							<stop offset="0" stop-color="#1a1636" />
+							<stop offset="1" stop-color="#0b0a16" />
+						</linearGradient>
+						<linearGradient id="curve" x1="0" y1="0" x2="1" y2="0">
+							<stop offset="0" stop-color="#8a7cff" />
+							<stop offset="0.5" stop-color="#c4b1ff" />
+							<stop offset="1" stop-color="#8a7cff" />
+						</linearGradient>
+					</defs>
+					<rect x="0" y="0" width="512" height="512" rx="120" fill="url(#bg)" />
+					<!-- area under the curve -->
+					<path
+						d="M96 360 C 176 360, 200 184, 256 176 C 312 184, 336 360, 416 360 Z"
+						fill="#8a7cff"
+						opacity="0.16"
+					/>
+					<!-- baseline + the 90% range ticks (p5 / p95) -->
+					<line x1="84" y1="360" x2="428" y2="360" stroke="#3a3566" stroke-width="6" stroke-linecap="round" />
+					<line x1="168" y1="346" x2="168" y2="374" stroke="#c4b1ff" stroke-width="7" stroke-linecap="round" opacity="0.8" />
+					<line x1="344" y1="346" x2="344" y2="374" stroke="#c4b1ff" stroke-width="7" stroke-linecap="round" opacity="0.8" />
+					<!-- the bell curve -->
+					<path
+						d="M96 360 C 176 360, 200 184, 256 176 C 312 184, 336 360, 416 360"
+						fill="none"
+						stroke="url(#curve)"
+						stroke-width="20"
+						stroke-linecap="round"
+					/>
+					<!-- warm median dot -->
+					<circle cx="256" cy="176" r="20" fill="#ffb27a" />
+					<circle cx="256" cy="176" r="20" fill="none" stroke="#0b0a16" stroke-width="5" />
+				</svg>
+				<div>
+					<h1>calcy<span class="dot">.</span></h1>
+					<p class="pron">
+						<span class="ipa">/ˈkal·si/</span> &nbsp;“kal-see” — the old college nickname for a
+						calculator.
+					</p>
+					<p class="tagline">A calculator that thinks in <span style="color: var(--violet-soft)">ranges</span>.</p>
+					<p class="tag-alts">
+						alt lines · <span>units &amp; uncertainty, in a notepad</span> ·
+						<span>honest math for fuzzy numbers</span>
+					</p>
+				</div>
+			</div>
+
+			<!-- ======================= LOGO ======================= -->
+			<section>
+				<div class="sec-head">
+					<h2>The mark</h2>
+					<p>
+						A soft bell curve sitting on its 90% range — the two ticks are p5 and p95, the
+						warm dot is the median. It says “distribution” and “likely range” at a glance, and
+						reads clearly down to a favicon. Reuse the same SVG everywhere.
+					</p>
+				</div>
+				<div class="logos">
+					<div class="tile">
+						<svg width="64" height="64" viewBox="0 0 512 512" aria-hidden="true">
+							<rect width="512" height="512" rx="120" fill="url(#bg)" />
+							<path d="M96 360 C 176 360, 200 184, 256 176 C 312 184, 336 360, 416 360 Z" fill="#8a7cff" opacity="0.16" />
+							<line x1="84" y1="360" x2="428" y2="360" stroke="#3a3566" stroke-width="6" stroke-linecap="round" />
+							<path d="M96 360 C 176 360, 200 184, 256 176 C 312 184, 336 360, 416 360" fill="none" stroke="url(#curve)" stroke-width="20" stroke-linecap="round" />
+							<circle cx="256" cy="176" r="20" fill="#ffb27a" />
+						</svg>
+						<span class="cap">app icon · 64px</span>
+					</div>
+					<div class="tile">
+						<svg width="28" height="28" viewBox="0 0 512 512" aria-hidden="true">
+							<rect width="512" height="512" rx="120" fill="url(#bg)" />
+							<path d="M96 360 C 176 360, 200 184, 256 176 C 312 184, 336 360, 416 360" fill="none" stroke="url(#curve)" stroke-width="26" stroke-linecap="round" />
+							<circle cx="256" cy="176" r="26" fill="#ffb27a" />
+						</svg>
+						<span class="cap">favicon · 16–28px</span>
+					</div>
+					<div class="tile">
+						<span class="wordmark">calcy<span class="dot">.</span></span>
+						<span class="cap">wordmark · on dark</span>
+					</div>
+					<div class="tile light">
+						<span class="wordmark on-light">calcy<span class="dot">.</span></span>
+						<span class="cap">wordmark · on light</span>
+					</div>
+				</div>
+			</section>
+
+			<!-- ======================= PALETTE ======================= -->
+			<section>
+				<div class="sec-head">
+					<h2>Palette</h2>
+					<p>
+						Deep indigo ground, soft violet as the one true brand colour, a single warm accent
+						for the moment that matters (the median, a primary action). Restraint is the point.
+					</p>
+				</div>
+				<div class="swatches">
+					<div class="sw"><div class="chip" style="background: #0a0a12"></div><div class="meta"><div class="name">ink-0</div><div class="hex">#0A0A12</div><div class="use">page ground</div></div></div>
+					<div class="sw"><div class="chip" style="background: #11101c"></div><div class="meta"><div class="name">ink-1</div><div class="hex">#11101C</div><div class="use">surfaces</div></div></div>
+					<div class="sw"><div class="chip" style="background: #272445"></div><div class="meta"><div class="name">ink-3</div><div class="hex">#272445</div><div class="use">borders</div></div></div>
+					<div class="sw"><div class="chip" style="background: #8a7cff"></div><div class="meta"><div class="name">violet</div><div class="hex">#8A7CFF</div><div class="use">brand, links</div></div></div>
+					<div class="sw"><div class="chip" style="background: #c4b1ff"></div><div class="meta"><div class="name">violet-soft</div><div class="hex">#C4B1FF</div><div class="use">distributions</div></div></div>
+					<div class="sw"><div class="chip" style="background: #ffb27a"></div><div class="meta"><div class="name">warm</div><div class="hex">#FFB27A</div><div class="use">accent · median · CTA</div></div></div>
+					<div class="sw"><div class="chip" style="background: #7ee0a0"></div><div class="meta"><div class="name">green</div><div class="hex">#7EE0A0</div><div class="use">plain values</div></div></div>
+					<div class="sw"><div class="chip" style="background: #7fc8ff"></div><div class="meta"><div class="name">blue</div><div class="hex">#7FC8FF</div><div class="use">rates</div></div></div>
+					<div class="sw"><div class="chip" style="background: #ff8a8a"></div><div class="meta"><div class="name">red</div><div class="hex">#FF8A8A</div><div class="use">errors</div></div></div>
+				</div>
+			</section>
+
+			<!-- ======================= SEMANTIC COLOUR ======================= -->
+			<section>
+				<div class="sec-head">
+					<h2>Colour carries meaning</h2>
+					<p>
+						calcy already colour-codes results by kind. That mapping is part of the brand —
+						keep it consistent everywhere a result appears.
+					</p>
+				</div>
+				<div class="demo">
+					<div class="row"><span class="expr">rate = 12k req/s</span><span class="arrow">→</span><span class="v-rate">12 thousand req/s</span></div>
+					<div class="row"><span class="expr">5 km + 3 mi</span><span class="arrow">→</span><span class="v-value">9.83 km</span></div>
+					<div class="row"><span class="expr">two days to four days</span><span class="arrow">→</span><span class="v-dist">about 2.9 day — usually 2 … 4</span></div>
+					<div class="row"><span class="expr">5 km + 3 s</span><span class="arrow">→</span><span class="v-err">⚠ can't add km and s</span></div>
+				</div>
+				<div class="legend">
+					<span><b class="v-value">●</b> value</span>
+					<span><b class="v-rate">●</b> rate</span>
+					<span><b class="v-dist">●</b> distribution</span>
+					<span><b class="v-err">●</b> error</span>
+				</div>
+			</section>
+
+			<!-- ======================= TYPE ======================= -->
+			<section>
+				<div class="sec-head">
+					<h2>Type</h2>
+					<p>
+						System sans for everything human (no font downloads, instant load), monospace for
+						everything the engine touches — expressions and results. The split reinforces
+						“friendly surface, precise core”.
+					</p>
+				</div>
+				<div>
+					<div class="type-row"><span class="lbl">display</span><span style="font-size: 2rem; font-weight: 680; letter-spacing: -0.02em">about 2.9 days</span></div>
+					<div class="type-row"><span class="lbl">heading</span><span style="font-size: 1.3rem; font-weight: 620">usually between 2 and 4</span></div>
+					<div class="type-row"><span class="lbl">body</span><span>Plain-spoken on the surface, rigorous underneath.</span></div>
+					<div class="type-row"><span class="lbl">mono</span><span class="mono" style="color: var(--violet-soft)">chance(total &lt; 20 day) → 0.31</span></div>
+				</div>
+			</section>
+
+			<!-- ======================= VOICE ======================= -->
+			<section>
+				<div class="sec-head">
+					<h2>Voice</h2>
+					<p>
+						Friendly precision: say the likely answer like a person would, then let the exact
+						numbers be one tap away. Never pretend a single number is the whole truth.
+					</p>
+				</div>
+				<div class="voice">
+					<div class="vcard">
+						<h3>Results</h3>
+						<div class="do"><span class="ico">✓</span><span>“about 2.9 days — usually 2 to 4”</span></div>
+						<div class="dont"><span class="ico">✕</span><span>“μ=2.87, σ=0.61, p5=2.01”</span></div>
+					</div>
+					<div class="vcard">
+						<h3>Errors</h3>
+						<div class="do"><span class="ico">✓</span><span>“can’t add km and seconds — they measure different things”</span></div>
+						<div class="dont"><span class="ico">✕</span><span>“incompatible dimensions: m + s”</span></div>
+					</div>
+					<div class="vcard">
+						<h3>Tone</h3>
+						<div class="do"><span class="ico">✓</span><span>lowercase, calm, concrete; admit uncertainty</span></div>
+						<div class="dont"><span class="ico">✕</span><span>shouty, jargon-first, false confidence</span></div>
+					</div>
+					<div class="vcard">
+						<h3>Numbers</h3>
+						<div class="do"><span class="ico">✓</span><span>“1.04 billion req” · “12k” · ranges by default</span></div>
+						<div class="dont"><span class="ico">✕</span><span>raw “1038240000” with no scale or range</span></div>
+					</div>
+				</div>
+			</section>
+
+			<footer>
+				calcy brand sheet · deep indigo + soft violet + one warm accent · the mark is a single
+				inline SVG, exportable to the PWA icon (192/512) and favicon. Not yet wired into the app —
+				say the word and I’ll convert these into CSS tokens + generate the icon PNGs.
+			</footer>
+		</div>
+	</body>
+</html>

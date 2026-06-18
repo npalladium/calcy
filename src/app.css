@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Two layers:
+ *   1. Primitive palette (@theme) — the raw brand colours from docs/brand.html,
+ *      exposed as CSS custom properties (and Tailwind theme values).
+ *   2. Semantic tokens (:root) — purpose-named aliases the components actually
+ *      use (--surface-*, --text-*, --accent, --c-* result colours, status
+ *      surfaces). Components reference these, never raw hex, so the palette can
+ *      be retuned in one place.
+ */
+@theme {
+	/* ink — deep indigo, near-black (surfaces, darkest → lightest) */
+	--color-ink-0: #0a0a12;
+	--color-ink-1: #11101c;
+	--color-ink-2: #1a1830;
+	--color-ink-3: #272445;
+	--color-ink-4: #34315a;
+
+	/* brand violet + one warm accent */
+	--color-violet: #8a7cff;
+	--color-violet-soft: #c4b1ff;
+	--color-violet-deep: #5b4fd6;
+	--color-warm: #ffb27a;
+	--color-warm-soft: #ffe0b8;
+
+	/* result colour-code (value / rate / distribution / error) */
+	--color-green: #7ee0a0;
+	--color-green-soft: #c8f5d0;
+	--color-blue: #7fc8ff;
+	--color-red: #ff8a8a;
+
+	/* text tints, brightest → faintest */
+	--color-text: #ecebf6;
+	--color-text-2: #c4c2d6;
+	--color-text-dim: #9a97b5;
+	--color-text-faint: #6f6b88;
+
+	--font-mono: "SFMono-Regular", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+	--font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+	/* aliases kept for existing references */
+	--color-brand: #8a7cff;
+	--color-ink: #0a0a12;
+	--color-accent-rgb: 138 124 255;
+}
+
+:root {
+	/* surfaces */
+	--bg: var(--color-ink-0);
+	--surface-1: var(--color-ink-1);
+	--surface-2: var(--color-ink-2);
+	--surface-3: var(--color-ink-3);
+	--surface-sel: rgba(26, 24, 48, 0.55);
+	--surface-accent: #211d3a;
+
+	/* borders */
+	--border: var(--color-ink-3);
+	--border-strong: var(--color-ink-4);
+	--border-accent: #3a2f5e;
+
+	/* text */
+	--text: var(--color-text);
+	--text-2: var(--color-text-2);
+	--text-muted: var(--color-text-dim);
+	--text-faint: var(--color-text-faint);
+
+	/* accent */
+	--accent: var(--color-violet);
+	--accent-soft: var(--color-violet-soft);
+	--accent-deep: var(--color-violet-deep);
+
+	/* result semantics */
+	--c-value: var(--color-green);
+	--c-value-soft: var(--color-green-soft);
+	--c-rate: var(--color-blue);
+	--c-dist: var(--color-violet-soft);
+	--c-error: var(--color-red);
+
+	/* status surfaces */
+	--danger: var(--color-red);
+	--danger-bg: #2a1414;
+	--danger-border: #5a2222;
+	--warn: var(--color-warm);
+	--warn-soft: var(--color-warm-soft);
+	--warn-bg: #2a2114;
+	--warn-border: #5a4622;
+
+	/* effects */
+	--shadow: rgba(0, 0, 0, 0.5);
+}
+
+html,
+body {
+	height: 100%;
+}
+
+body {
+	background: var(--bg);
+	color: var(--text);
+	-webkit-font-smoothing: antialiased;
+}

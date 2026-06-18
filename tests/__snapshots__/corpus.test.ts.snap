@@ -1,0 +1,97 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden corpus > bayesian update 1`] = `
+[
+  "0.239 (0.107 … 0.432)",
+  "0.242 (0.105 … 0.429)",
+]
+`;
+
+exports[`golden corpus > confidence intervals 1`] = `
+[
+  "987 (802 … 1208)",
+  "x = 3.24 (1 … 10.1)",
+  "0",
+  "6.49 (2 … 20.3)",
+]
+`;
+
+exports[`golden corpus > custom units 1`] = `
+[
+  "unit sprint",
+  "42 day",
+]
+`;
+
+exports[`golden corpus > errors are reported, not thrown 1`] = `
+[
+  "! incompatible dimensions: m + s",
+  "∞ 1/m",
+  "1.41 m^0.5",
+]
+`;
+
+exports[`golden corpus > named distributions 1`] = `
+[
+  "101 (75.7 … 125)",
+  "32.4 (10 … 101)",
+  "4.98 (0.522 … 9.48)",
+  "298396 (22648 … 1.29e6) s",
+]
+`;
+
+exports[`golden corpus > plain english 1`] = `
+[
+  "247629 (173600 … 349546) s",
+  "246274 (172853 … 346910) s",
+  "243002 (170179 … 342907) s",
+  "429575 (389398 … 477360) s",
+]
+`;
+
+exports[`golden corpus > progressive bracket 1`] = `
+[
+  "income = 50000",
+  "6481",
+]
+`;
+
+exports[`golden corpus > roll-up and deadline odds 1`] = `
+[
+  "a = 247629 (173600 … 349546) s",
+  "b = 675822 (432167 … 1.04e6) s",
+  "total = 925642 (669713 … 1.31e6) s",
+  "1",
+]
+`;
+
+exports[`golden corpus > three-point estimates 1`] = `
+[
+  "304751 (197260 … 488262) s",
+  "350178 (220219 … 589259) s",
+]
+`;
+
+exports[`golden corpus > units and conversion 1`] = `
+[
+  "9828 m",
+  "16.7 m/s",
+  "1200 MB",
+  "25 m/s",
+]
+`;
+
+exports[`golden corpus > variables and reuse 1`] = `
+[
+  "rate = 12000 req/s",
+  "1.04e9 req/day",
+  "3.11e10 req",
+]
+`;
+
+exports[`golden corpus > weighted scenarios 1`] = `
+[
+  "200 (100 … 200)",
+  "12 (12 … 20)",
+]
+`;

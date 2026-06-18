@@ -1,0 +1,225 @@
+<script lang="ts">
+import { onMount, tick } from 'svelte';
+import type { LineResult } from '$lib/engine';
+import { collectVariables } from '$lib/editor';
+
+// CodeMirror-backed editor for the calc language: syntax highlighting,
+// unit/variable autocomplete, and inline error markers driven by per-line
+// engine results. CodeMirror is dynamically imported on mount so it stays out
+// of the SSR/prerender path and the initial app shell.
+let {
+	value = $bindable(),
+	lines = [],
+	unitNames = [],
+	oncaretline,
+	onscrolltop
+}: {
+	value: string;
+	lines?: LineResult[];
+	unitNames?: string[];
+	oncaretline?: (line: number) => void;
+	onscrolltop?: (top: number) => void;
+} = $props();
+
+let host: HTMLDivElement;
+// biome-ignore lint/suspicious/noExplicitAny: CodeMirror types are loaded dynamically.
+let view: any;
+// biome-ignore lint/suspicious/noExplicitAny: CodeMirror lint fn loaded dynamically.
+let setDiagnostics: ((state: any, diags: any[]) => any) | null = null;
+let ready = $state(false);
+// Live refs the editor extensions close over (created once, read repeatedly).
+let unitSet = new Set<string>();
+$effect(() => {
+	unitSet = new Set(unitNames);
+});
+
+export async function insertSnippet(snippet: string) {
+	if (!view) {
+		value = value.trim() ? `${value}\n${snippet}` : snippet;
+		return;
+	}
+	const sel = view.state.selection.main;
+	const doc: string = view.state.doc.toString();
+	const before = doc.slice(0, sel.from);
+	const after = doc.slice(sel.to);
+	const lead = before === '' || before.endsWith('\n') ? '' : '\n';
+	const trail = after === '' || after.startsWith('\n') ? '' : '\n';
+	const text = lead + snippet + trail;
+	const at = sel.from + text.length;
+	view.dispatch({
+		changes: { from: sel.from, to: sel.to, insert: text },
+		selection: { anchor: at }
+	});
+	await tick();
+	view.focus();
+}
+
+onMount(() => {
+	let destroyed = false;
+	(async () => {
+		const [{ EditorView, keymap, lineNumbers, drawSelection }, { EditorState }, commands, { autocompletion, completionKeymap }, { StreamLanguage, syntaxHighlighting, HighlightStyle }, { tags: t }, lint] =
+			await Promise.all([
+				import('@codemirror/view'),
+				import('@codemirror/state'),
+				import('@codemirror/commands'),
+				import('@codemirror/autocomplete'),
+				import('@codemirror/language'),
+				import('@lezer/highlight'),
+				import('@codemirror/lint')
+			]);
+		if (destroyed) return;
+		setDiagnostics = lint.setDiagnostics;
+
+		const calc = StreamLanguage.define({
+			token(stream) {
+				if (stream.eatSpace()) return null;
+				if (stream.match(/#.*/)) return 'co';
+				if (stream.match(/\b(?:to|in|unit)\b/)) return 'kw';
+				if (stream.match(/[0-9][0-9_]*(?:\.[0-9_]+)?(?:[eE][+-]?[0-9]+)?/)) return 'num';
+				if (stream.match(/[A-Za-z_]\w*/)) {
+					const w = stream.current();
+					if (unitSet.has(w)) return 'unit';
+					return stream.peek() === '(' ? 'fn' : 'var';
+				}
+				if (stream.match(/[+\-*/^=]|×|÷/)) return 'op';
+				stream.next();
+				return null;
+			},
+			tokenTable: {
+				co: t.lineComment,
+				kw: t.keyword,
+				num: t.number,
+				op: t.operator,
+				unit: t.typeName,
+				fn: t.function(t.variableName),
+				var: t.variableName
+			}
+		});
+
+		const highlight = HighlightStyle.define([
+			{ tag: t.lineComment, color: 'var(--text-faint)', fontStyle: 'italic' },
+			{ tag: t.keyword, color: 'var(--c-dist)' },
+			{ tag: t.number, color: 'var(--c-value)' },
+			{ tag: t.operator, color: 'var(--c-rate)' },
+			{ tag: t.typeName, color: 'var(--warm)' },
+			{ tag: t.function(t.variableName), color: 'var(--c-rate)' },
+			{ tag: t.variableName, color: 'var(--text)' }
+		]);
+
+		// biome-ignore lint/suspicious/noExplicitAny: CompletionContext from dynamic import.
+		const complete = (ctx: any) => {
+			const w = ctx.matchBefore(/[A-Za-z_]\w*/);
+			if (!w || (w.from === w.to && !ctx.explicit)) return null;
+			const vars = collectVariables(ctx.state.doc.toString());
+			const options = [
+				...['to', 'in', 'unit'].map((label) => ({ label, type: 'keyword' })),
+				...vars.map((label) => ({ label, type: 'variable' })),
+				...unitNames.map((label) => ({ label, type: 'type', boost: -1 }))
+			];
+			return { from: w.from, options, validFor: /^[A-Za-z_]\w*$/ };
+		};
+
+		const theme = EditorView.theme(
+			{
+				'&': { color: 'var(--text)', backgroundColor: 'transparent', height: '100%' },
+				'.cm-content': {
+					fontFamily: 'var(--font-mono)',
+					fontSize: '14px',
+					lineHeight: '22px',
+					padding: '10px 0',
+					caretColor: 'var(--text)'
+				},
+				'.cm-line': { padding: '0 12px' },
+				'.cm-scroller': { overflow: 'auto', fontFamily: 'var(--font-mono)' },
+				'&.cm-focused': { outline: 'none' },
+				'.cm-cursor': { borderLeftColor: 'var(--text)' },
+				'.cm-selectionBackground, ::selection': { backgroundColor: 'var(--surface-3)' },
+				'&.cm-focused .cm-selectionBackground': { backgroundColor: 'var(--surface-3)' },
+				'.cm-lint-marker': { width: '0.8em' }
+			},
+			{ dark: true }
+		);
+
+		const state = EditorState.create({
+			doc: value,
+			extensions: [
+				lineNumbers(),
+				drawSelection(),
+				commands.history(),
+				keymap.of([...commands.defaultKeymap, ...commands.historyKeymap, ...completionKeymap]),
+				calc,
+				syntaxHighlighting(highlight),
+				autocompletion({ override: [complete] }),
+				lint.lintGutter(),
+				theme,
+				EditorView.updateListener.of((u) => {
+					if (u.docChanged) value = u.state.doc.toString();
+					if (u.selectionSet || u.docChanged) {
+						const head = u.state.selection.main.head;
+						oncaretline?.(u.state.doc.lineAt(head).number - 1);
+					}
+				})
+			]
+		});
+
+		view = new EditorView({ state, parent: host });
+		view.scrollDOM.addEventListener('scroll', () => onscrolltop?.(view.scrollDOM.scrollTop));
+		ready = true;
+	})();
+
+	return () => {
+		destroyed = true;
+		view?.destroy();
+	};
+});
+
+// Push external value changes (load sheet, insert, tape→notepad) into the view.
+// Read `value` first so the effect always tracks it as a dependency — if we let
+// `view &&` short-circuit on the first run (the CodeMirror view mounts via an
+// async import, so it's briefly undefined), `value` would never be tracked and
+// a sheet loaded from the URL hash / DB would never reach the editor.
+$effect(() => {
+	const next = value;
+	if (view && next !== view.state.doc.toString()) {
+		view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
+	}
+});
+
+// Reflect engine errors as inline diagnostics whenever results change.
+$effect(() => {
+	void lines;
+	if (!view || !setDiagnostics) return;
+	const doc = view.state.doc;
+	const diags = lines
+		.filter((l) => l.error)
+		.map((l) => {
+			const ln = doc.line(Math.min(l.index + 1, doc.lines));
+			return { from: ln.from, to: ln.to, severity: 'error', message: l.error as string };
+		});
+	view.dispatch(setDiagnostics(view.state, diags));
+});
+</script>
+
+<div class="cm-host" bind:this={host}></div>
+{#if !ready}
+	<div class="loading" aria-hidden="true"></div>
+{/if}
+
+<style>
+	.cm-host {
+		height: 100%;
+		min-height: 0;
+		overflow: hidden;
+	}
+	.cm-host :global(.cm-editor) {
+		height: 100%;
+	}
+	.cm-host :global(.cm-gutters) {
+		background: var(--surface-1);
+		border-right: 1px solid var(--surface-2);
+		color: var(--text-faint);
+	}
+	.loading {
+		display: none;
+	}
+</style>
