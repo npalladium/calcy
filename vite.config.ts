@@ -32,6 +32,13 @@ export default defineConfig({
 		tailwindcss(),
 		sveltekit(),
 		SvelteKitPWA({
+			// The site is hosted under a subpath (GitHub Pages: /calcy/). The app's
+			// own asset URLs are relative (kit.paths.relative), but the generated
+			// service worker still needs the deploy base to precache the prerendered
+			// index and to bind its navigation fallback — otherwise both default to
+			// the origin root "/", which 404s under the subpath and silently fails SW
+			// install (no offline). This base is used ONLY for SW URL generation.
+			kit: { base: '/calcy/' },
 			registerType: 'autoUpdate',
 			manifest: {
 				name: 'Calcy',
