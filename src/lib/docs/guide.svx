@@ -1,0 +1,100 @@
+calcy is a calculator that understands **units** and **uncertainty**. Type plain
+maths and get an answer — and when you're not sure of a number, you can type a
+range and calcy carries that "give or take" all the way through to the result.
+
+### Start typing
+
+Each line is its own little calculation. Units are part of the maths, so calcy
+keeps you honest:
+
+```
+5 km + 3 mi          → 9.83 km
+12 V / 4 ohm         → 3 A
+1 kWh / 60 W         → 16.7 hour
+```
+
+If you mix things that don't belong together — like `10 m + 5 s` — calcy tells
+you, instead of quietly handing back a wrong answer.
+
+### When you're not sure of a number
+
+Real life is rarely one exact figure. Type a range and calcy works out the likely
+result for you:
+
+```
+trips = 800 to 1200 per day
+revenue = trips * $4.50
+```
+
+You'll see the **most likely value** along with the range it's likely to fall in.
+There are a few friendly ways to say "roughly":
+
+- `3 ± 1 day` — give or take a day
+- `about 5 kg` or `~5 kg` — roughly, give or take ~10%
+- `1000 to 1500 visitors` — somewhere in this range
+- `normal(100, 15)` — when you already know the statistics
+
+You don't need any statistics background to use these — pick whichever matches how
+you'd say it out loud.
+
+### "Convert" vs "range": `in` and `to`
+
+Two small words, kept separate so there's never any guessing:
+
+- `in` **converts** units — `5 km in mi` → 3.11 mi
+- `to` means a **range** — `5 to 10 kg` is "somewhere between 5 and 10"
+
+If you write `5 km to mi` hoping to convert, calcy spots it and points you to `in`.
+
+### Give things names
+
+```
+rate = 12k req/s       # k means ×1000, M means ×1,000,000
+daily = rate * 1 day   # reuse names you defined earlier
+```
+
+Anything after `#` is just a note to yourself. Reusing a name you defined above
+keeps the whole sheet consistent.
+
+### Ask questions
+
+Once you've described a situation, you can interrogate it in plain terms:
+
+```
+chance(revenue > $5000)     # how likely is this?
+mean(trips)                 # the average
+median(trips)               # the middle value
+```
+
+### Money
+
+Currency symbols work however you like to write them, and each currency stays
+separate so they're never added together by accident:
+
+```
+$5 + 3 $     → $8.00
+₹2500000     → ₹2,500,000.00
+```
+
+You can even set your own exchange rate and convert across currencies:
+
+```
+bridge fx = 83 ₹/$
+1000 $ in INR via fx     → ₹83,000.00
+```
+
+### Exact answers and dependable estimates
+
+When a calculation has one exact answer, calcy gives you that. When you've
+described something uncertain, it estimates the likely outcome by exploring the
+range of possibilities. Both are real calculations — neither is a guess, and you
+never have to think about which one you're getting.
+
+### Finding your way around
+
+- **Examples** — open a ready-made sheet to learn from
+- **?** — a cheat sheet you can click to insert (`⌘/`)
+- `⌘K` your sheets · `⌘↵` reshuffle the estimates · `Esc` close
+
+Everything runs on your own device — no account, no internet needed. Your sheets
+are saved right here, and **Share** packs one into a link you can send to anyone.

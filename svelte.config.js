@@ -1,9 +1,14 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import { mdsvex } from 'mdsvex';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-	preprocess: vitePreprocess(),
+	// Long-form docs (the Guide, How it works) are authored as Markdown `.svx`
+	// files under src/lib/docs and compiled by mdsvex, so the prose lives in
+	// plain Markdown rather than hand-written HTML inside a component.
+	extensions: ['.svelte', '.svx'],
+	preprocess: [vitePreprocess(), mdsvex({ extensions: ['.svx'] })],
 	kit: {
 		// Pure client-side SPA: prerender the shell (index.html, with relative
 		// asset paths so it works at any base path — e.g. GitHub Pages' /calcy/),
