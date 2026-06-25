@@ -21,11 +21,11 @@ after install.
 
 ## Status
 
-calcy is **mostly feature-complete and mostly feature-stable**. The engine and UI do
-what they set out to do, and I don't expect to add major features or make
-breaking changes—though I might if I run into a compelling use-case. Micro-features, polish, and bug fixes
-are still very welcome. See [Contributing](#contributing) for how to report a bug or
-propose a feature.
+calcy is **beta software**, but **mostly feature-complete and mostly feature-stable**.
+The engine and UI do what they set out to do, and I don't expect to add major features
+or make breaking changes—though I might if I run into a compelling use-case. Expect the
+odd rough edge; micro-features, polish, and bug fixes are still very welcome. See
+[Contributing](#contributing) for how to report a bug or propose a feature.
 
 ## The one idea behind it
 
