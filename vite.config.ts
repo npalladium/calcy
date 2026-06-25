@@ -1,9 +1,33 @@
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vitest/config';
 
+// Build stamp shown in the footer. The CalVer version is the single source of
+// truth in package.json; the short commit is read from git so a deployed build
+// can be traced back to its source. Both are baked in at build time via
+// `define`; a missing git checkout falls back to 'dev'.
+function appVersion(): string {
+	const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+	return pkg.version;
+}
+function gitSha(): string {
+	try {
+		return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+			.toString()
+			.trim();
+	} catch {
+		return 'dev';
+	}
+}
+
 export default defineConfig({
+	define: {
+		__BUILD_VERSION__: JSON.stringify(appVersion()),
+		__BUILD_SHA__: JSON.stringify(gitSha())
+	},
 	plugins: [
 		tailwindcss(),
 		sveltekit(),

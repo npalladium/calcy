@@ -39,6 +39,12 @@ body:
     attributes:
       label: Browser & OS
       placeholder: "Chrome 126 on macOS 14"
+  - type: input
+    id: version
+    attributes:
+      label: calcy version
+      description: Shown in the footer — auto-filled by the "Report a bug" button.
+      placeholder: "v2026.06.25 (c0084d7)"
   - type: textarea
     id: console
     attributes:
