@@ -12,7 +12,7 @@ let { c }: { c: SheetController } = $props();
 </script>
 
 <header>
-	<strong class="logo">Calcy</strong>
+	<strong class="logo">calcy</strong>
 	<input class="title" bind:value={c.title} aria-label="sheet title" />
 	<div class="spacer"></div>
 

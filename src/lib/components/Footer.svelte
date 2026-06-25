@@ -49,7 +49,7 @@ function reportBug() {
 		>
 	</nav>
 	<span class="meta">
-		<span class="note">Runs locally — no network, no account.</span>
+		<span class="note">Runs locally—no network, no account.</span>
 		<span class="dot" aria-hidden="true">·</span>
 		{#if commitUrl}
 			<a
