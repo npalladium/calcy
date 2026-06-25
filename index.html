@@ -6,12 +6,6 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="theme-color" content="#8100ff" />
 
-		<!-- Social-graph preview + base SEO. This is a prerendered SPA (ssr=false),
-		     so the page's <svelte:head> never reaches link crawlers — these static
-		     tags are what Slack/Discord/Twitter/iMessage and search engines read.
-		     The runtime <svelte:head> in +page.svelte still overrides <title> with
-		     the active sheet name once JS runs. Image URLs must be absolute, so
-		     they're pinned to the production origin. -->
 		<title>calcy — unit-aware, uncertainty-propagating calculator</title>
 		<meta
 			name="description"
@@ -40,14 +34,13 @@
 		/>
 		<meta name="twitter:image" content="https://npalladium.github.io/calcy/og.png" />
 
-		<link href="./_app/immutable/entry/start.Fx-O2fqh.js" rel="modulepreload">
-		<link href="./_app/immutable/chunks/DsGwPtcj.js" rel="modulepreload">
-		<link href="./_app/immutable/chunks/CUnnrov3.js" rel="modulepreload">
-		<link href="./_app/immutable/entry/app.7VCO1vsa.js" rel="modulepreload">
-		<link href="./_app/immutable/chunks/kNaey6uv.js" rel="modulepreload">
+		<link href="./_app/immutable/entry/start.BgyY9FXe.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/CUa9p99s.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/DubdKkVk.js" rel="modulepreload">
+		<link href="./_app/immutable/entry/app.CIMtczQU.js" rel="modulepreload">
 		<link href="./_app/immutable/chunks/xihTtKlq.js" rel="modulepreload">
-		<link href="./_app/immutable/nodes/0.OS9V4tSd.js" rel="modulepreload">
-		<link href="./_app/immutable/nodes/2.DUg2AtT7.js" rel="modulepreload">
+		<link href="./_app/immutable/nodes/0.urW1VN_g.js" rel="modulepreload">
+		<link href="./_app/immutable/nodes/2.DGH2JL_f.js" rel="modulepreload">
 		
 		<link href="./_app/immutable/assets/0.hVGPcmCh.css" rel="stylesheet">
 		<link href="./_app/immutable/assets/2.CDfGjf6U.css" rel="stylesheet">
@@ -56,15 +49,15 @@
 		<div style="display: contents">
 			<script>
 				{
-					__sveltekit_hdx841 = {
+					__sveltekit_zjq2rj = {
 						base: new URL(".", location).pathname.slice(0, -1)
 					};
 
 					const element = document.currentScript.parentElement;
 
 					Promise.all([
-						import("./_app/immutable/entry/start.Fx-O2fqh.js"),
-						import("./_app/immutable/entry/app.7VCO1vsa.js")
+						import("./_app/immutable/entry/start.BgyY9FXe.js"),
+						import("./_app/immutable/entry/app.CIMtczQU.js")
 					]).then(([kit, app]) => {
 						kit.start(app, element);
 					});
