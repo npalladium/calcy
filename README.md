@@ -9,8 +9,9 @@ A pure, offline, installable PWA notepad that does three things at once:
 
 1. **Unit-aware math**—`5 km + 3 mi`, `60 km / 1 h → speed`, with strict
    dimensional checking (`5 km + 3 s` is an error, not a silent number).
-2. **Uncertainty math**—`800 to 1200` is a 90% confidence interval; all
-   arithmetic is Monte-Carlo, so ranges propagate through every operation.
+2. **Uncertainty math**—`800 to 1200` is a 90% confidence interval; arithmetic is
+   Monte-Carlo by default (exact where the math allows), so ranges propagate
+   through every operation.
 3. **Rate reasoning**—type a rate (`12k req/s`) and instantly see it per
    second…year, and **accumulate** it over any window into a total.
 

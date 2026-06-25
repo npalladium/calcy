@@ -31,6 +31,21 @@ export interface UnitTableOptions {
 	yearDays: number;
 }
 
+// One catalogue entry per *unit* (not per alias): the canonical token, its
+// synonyms, the section it belongs to, and enough of its definition to describe
+// it. Emitted by `buildUnitTable` when a `collect` sink is passed, so the
+// generated reference (scripts/gen-reference.ts) is derived from the exact same
+// `add()` calls that build the lookup table — there is no second list to drift.
+export interface UnitCatEntry {
+	category: string;
+	canonical: string;
+	aliases: string[];
+	dim: Dimension;
+	scale: number;
+	kind?: 'affine' | 'log' | 'diff';
+	prefixed?: boolean; // accepts the full set of SI prefixes (metric units)
+}
+
 const DEFAULTS: UnitTableOptions = { monthDays: 30.436875, yearDays: 365.25 };
 
 // Full SI decimal prefixes (quetta … quecto). `da`/deca omitted (rarely used,
@@ -106,22 +121,43 @@ const ILLUMINANCE: Dimension = { luminosity: 1, length: -2 };
 const DOSE: Dimension = { length: 2, time: -2 }; // J/kg (Gy, Sv)
 
 // Build the full table for a given month/year convention.
-export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string, UnitDef> {
+export function buildUnitTable(
+	opts: Partial<UnitTableOptions> = {},
+	collect?: (e: UnitCatEntry) => void
+): Map<string, UnitDef> {
 	const o = { ...DEFAULTS, ...opts };
 	const t = new Map<string, UnitDef>();
+	// Catalogue capture. When `collect` is supplied (only by buildUnitCatalogue),
+	// each helper emits one structured entry under the current `section`. On the
+	// hot path (`collect` undefined) `emit` is a no-op, so the Map build is
+	// unchanged.
+	let category = '';
+	const section = (label: string) => {
+		category = label;
+	};
+	const emit = (
+		canonical: string,
+		aliases: string[],
+		dim: Dimension,
+		scale: number,
+		extra: Partial<UnitCatEntry> = {}
+	) => collect?.({ category, canonical, aliases, dim, scale, ...extra });
 	const add = (names: string[], dim: Dimension, scale: number) => {
 		for (const n of names) t.set(n, { dim, scale });
+		emit(names[0], names.slice(1), dim, scale);
 	};
 	// Affine (offset) unit: `base = scale·x + offset`. Absolute temperatures and
 	// gauge pressures. The magnitude-multiply consumes the offset (see eval.ts).
 	const addAffine = (names: string[], dim: Dimension, scale: number, offset: number) => {
 		for (const n of names) t.set(n, { dim, scale, offset });
+		emit(names[0], names.slice(1), dim, scale, { kind: 'affine' });
 	};
 	// Logarithmic (ratio) unit: `base = ref·10^(x/factor)`. `scale` is set to
 	// `ref` only so the catalogue's finite/non-zero invariant holds; the log
 	// transform (eval.ts/format.ts) reads `log`, never `scale`.
 	const addLog = (names: string[], dim: Dimension, ref: number, factor: number) => {
 		for (const n of names) t.set(n, { dim, scale: ref, log: { ref, factor } });
+		emit(names[0], names.slice(1), dim, ref, { kind: 'log' });
 	};
 	// Expand a metric symbol across SI prefixes (guard: never overwrite an
 	// explicit unit). `dim` is shared by reference — fine, it is read-only.
@@ -131,9 +167,11 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 			const key = `${p}${sym}`;
 			if (!t.has(key)) t.set(key, { dim, scale: scale * f });
 		}
+		emit(sym, [], dim, scale, { prefixed: true });
 	};
 
 	// ===================== LENGTH (base m) =====================
+	section('Length');
 	add(['m', 'meter', 'meters', 'metre', 'metres'], LEN(), 1);
 	metric('m', LEN(), 1);
 	add(['km', 'kilometer', 'kilometers'], LEN(), 1e3);
@@ -160,6 +198,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['pc', 'parsec', 'parsecs'], LEN(), 3.08567758149137e16);
 
 	// ===================== AREA =====================
+	section('Area');
 	add(['m2', 'sqm'], AREA, 1);
 	add(['km2', 'sqkm'], AREA, 1e6);
 	add(['cm2'], AREA, 1e-4);
@@ -172,6 +211,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['sqin'], AREA, 0.00064516);
 
 	// ===================== VOLUME =====================
+	section('Volume');
 	add(['m3', 'cum'], VOLUME, 1);
 	add(['cc', 'cm3'], VOLUME, 1e-6);
 	add(['L', 'l', 'liter', 'liters', 'litre', 'litres'], VOLUME, 1e-3);
@@ -190,6 +230,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['bbl', 'barrel', 'barrels'], VOLUME, 0.158987294928); // oil
 
 	// ===================== MASS (base kg) =====================
+	section('Mass');
 	add(['kg', 'kilogram', 'kilograms'], MASS(), 1);
 	add(['g', 'gram', 'grams', 'gramme', 'grammes'], MASS(), 1e-3);
 	metric('g', MASS(), 1e-3);
@@ -205,6 +246,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['amu', 'dalton', 'daltons', 'Da'], MASS(), 1.6605390666e-27);
 
 	// ===================== TIME (base s) =====================
+	section('Time');
 	add(['s', 'sec', 'secs', 'second', 'seconds'], TIME(), 1);
 	metric('s', TIME(), 1);
 	add(['ms', 'millisecond', 'milliseconds'], TIME(), 1e-3);
@@ -220,12 +262,14 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['millennium', 'millennia'], TIME(), 1000 * o.yearDays * 86400);
 
 	// ===================== FREQUENCY =====================
+	section('Frequency');
 	metric('Hz', FREQ, 1);
 	add(['hertz'], FREQ, 1);
 	add(['rpm'], FREQ, 1 / 60);
 	add(['bpm'], FREQ, 1 / 60);
 
 	// ===================== SPEED / ACCELERATION =====================
+	section('Speed & acceleration');
 	add(['kph', 'kmh', 'kmph'], SPEED, 1000 / 3600);
 	add(['mph'], SPEED, 1609.344 / 3600);
 	add(['fps'], SPEED, 0.3048);
@@ -234,6 +278,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['gal_accel', 'galileo'], ACCEL, 1e-2);
 
 	// ===================== FORCE =====================
+	section('Force');
 	metric('N', FORCE, 1);
 	add(['newton', 'newtons'], FORCE, 1);
 	add(['dyn', 'dyne', 'dynes'], FORCE, 1e-5);
@@ -242,6 +287,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['kip'], FORCE, 4448.2216152605);
 
 	// ===================== PRESSURE =====================
+	section('Pressure');
 	metric('Pa', PRESSURE, 1);
 	add(['pascal', 'pascals'], PRESSURE, 1);
 	add(['bar', 'bars'], PRESSURE, 1e5);
@@ -258,6 +304,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['inHg'], PRESSURE, 3386.389);
 
 	// ===================== ENERGY =====================
+	section('Energy');
 	metric('J', ENERGY, 1);
 	add(['joule', 'joules'], ENERGY, 1);
 	add(['erg', 'ergs'], ENERGY, 1e-7);
@@ -274,12 +321,14 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['tonTNT', 'tonsTNT'], ENERGY, 4.184e9);
 
 	// ===================== POWER =====================
+	section('Power');
 	metric('W', POWER, 1);
 	add(['watt', 'watts'], POWER, 1);
 	add(['hp', 'horsepower'], POWER, 745.6998715822702);
 	add(['PS', 'metrichorsepower'], POWER, 735.49875);
 
 	// ===================== ELECTRICAL & MAGNETIC =====================
+	section('Electrical & magnetic');
 	metric('A', CUR(), 1);
 	add(['amp', 'amps', 'ampere', 'amperes'], CUR(), 1);
 	metric('C', CHARGE, 1);
@@ -309,6 +358,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	addLog(['dBW'], POWER, 1, 10);
 
 	// ===================== TEMPERATURE (base K) =====================
+	section('Temperature');
 	add(['K', 'kelvin', 'kelvins'], TEMP(), 1);
 	metric('K', TEMP(), 1);
 	// Absolute scales are affine: K = scale·x + offset. `20 °C` → 293.15 K.
@@ -317,16 +367,19 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	// Difference units (no offset, tagged `diff`): a 1 °C step is 1 K, 1 °F is 5/9 K.
 	const addDiff = (names: string[], scale: number) => {
 		for (const n of names) t.set(n, { dim: TEMP(), scale, diff: true });
+		emit(names[0], names.slice(1), TEMP(), scale, { kind: 'diff' });
 	};
 	addDiff(['deltaC', 'Cdeg', 'Δ°C', 'ΔC'], 1);
 	addDiff(['deltaF', 'Fdeg', 'Δ°F', 'ΔF'], 5 / 9);
 	add(['rankine', 'degR'], TEMP(), 5 / 9);
 
 	// ===================== AMOUNT / CATALYSIS =====================
+	section('Amount');
 	metric('mol', AMT(), 1);
 	add(['mole', 'moles'], AMT(), 1);
 
 	// ===================== LIGHT =====================
+	section('Light');
 	metric('cd', LUM(), 1);
 	add(['candela', 'candelas'], LUM(), 1);
 	metric('lm', LUM(), 1); // lumen ≈ cd·sr (sr dimensionless)
@@ -335,6 +388,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['lux'], ILLUMINANCE, 1);
 
 	// ===================== RADIATION =====================
+	section('Radiation');
 	metric('Bq', FREQ, 1);
 	add(['becquerel'], FREQ, 1);
 	add(['Ci', 'curie'], FREQ, 3.7e10);
@@ -344,6 +398,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['sievert', 'sieverts'], DOSE, 1);
 
 	// ===================== DATA (base bit) =====================
+	section('Data');
 	add(['bit', 'bits', 'b'], DATA(), 1);
 	add(['B', 'byte', 'bytes', 'octet', 'octets'], DATA(), 8);
 	add(['nibble', 'nybble'], DATA(), 4);
@@ -365,6 +420,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['Gbps'], { data: 1, time: -1 }, 1e9);
 
 	// ===================== ANGLE (dimensionless) =====================
+	section('Angle');
 	add(['rad', 'radian', 'radians'], DIMLESS, 1);
 	add(['deg', 'degree', 'degrees', '°'], DIMLESS, Math.PI / 180);
 	add(['grad', 'gradian', 'gon'], DIMLESS, Math.PI / 200);
@@ -374,6 +430,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['sr', 'steradian'], DIMLESS, 1);
 
 	// ===================== DIMENSIONLESS RATIOS =====================
+	section('Ratios');
 	add(['percent', '%'], DIMLESS, 0.01);
 	add(['permille', '‰'], DIMLESS, 1e-3);
 	add(['ppm'], DIMLESS, 1e-6);
@@ -382,6 +439,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['ppt'], DIMLESS, 1e-12);
 
 	// ===================== COUNTS (each name is its own base dim) =====================
+	section('Counts');
 	const counts: [string, string[]][] = [
 		['req', ['req', 'reqs', 'request', 'requests']],
 		['event', ['event', 'events', 'evt']],
@@ -411,6 +469,7 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['avogadro'], DIMLESS, 6.02214076e23);
 
 	// ===================== CURRENCY (own base dim) =====================
+	section('Currency');
 	add(['$', 'usd', 'USD', 'dollar', 'dollars'], { usd: 1 }, 1);
 	add(['cent', 'cents'], { usd: 1 }, 0.01);
 	add(['k$', 'K$'], { usd: 1 }, 1e3);
@@ -420,11 +479,13 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 	add(['₹', 'inr', 'INR', 'rupee', 'rupees'], { inr: 1 }, 1);
 
 	// ===================== CARBON (own base dim) =====================
+	section('Carbon');
 	add(['gCO2', 'gCO2e'], { co2: 1 }, 1);
 	add(['kgCO2', 'kgCO2e'], { co2: 1 }, 1e3);
 	add(['tCO2', 'tCO2e', 'tonneCO2'], { co2: 1 }, 1e6);
 
 	// ===================== NAMED CONSTANTS =====================
+	section('Constants');
 	// Dimensionless math constants. `e` (Euler's number) is the standalone
 	// identifier only; inside a number literal `e` is still the exponent (`2e3`).
 	add(['pi', 'π'], DIMLESS, Math.PI);
@@ -439,6 +500,35 @@ export function buildUnitTable(opts: Partial<UnitTableOptions> = {}): Map<string
 
 // Default month/year convention table, for callers that don't need toggling.
 export const DEFAULT_UNITS = buildUnitTable();
+
+// Structured catalogue of every unit and named constant, in declaration order
+// and grouped by section. Derived from the same `add()` calls as the lookup
+// table (via the `collect` sink), so it can never list a unit the engine doesn't
+// know or miss one it does. Drives the generated reference; safe for the app to
+// import too (e.g. a unit picker). Entries are deduped/merged by canonical name
+// within a section so a base symbol that is both `add()`ed and `metric()`-prefixed
+// (e.g. `m`) appears once, carrying its aliases and the prefixable flag.
+export function buildUnitCatalogue(opts: Partial<UnitTableOptions> = {}): UnitCatEntry[] {
+	const raw: UnitCatEntry[] = [];
+	buildUnitTable(opts, (e) => raw.push(e));
+	const byKey = new Map<string, UnitCatEntry>();
+	const order: string[] = [];
+	for (const e of raw) {
+		const key = `${e.category} ${e.canonical}`;
+		const prev = byKey.get(key);
+		if (!prev) {
+			byKey.set(key, { ...e, aliases: [...e.aliases] });
+			order.push(key);
+			continue;
+		}
+		for (const a of e.aliases) if (!prev.aliases.includes(a)) prev.aliases.push(a);
+		prev.prefixed = prev.prefixed || e.prefixed;
+		prev.kind = prev.kind ?? e.kind;
+	}
+	return order.map((k) => byKey.get(k) as UnitCatEntry);
+}
+
+export const UNIT_CATALOGUE = buildUnitCatalogue();
 
 export function lookupUnit(table: Map<string, UnitDef>, name: string): UnitDef | undefined {
 	return table.get(name);

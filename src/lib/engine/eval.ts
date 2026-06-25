@@ -298,6 +298,209 @@ const PARAMS: Record<string, string[][]> = {
 	]
 };
 
+// Catalogue of every user-callable function, for the generated reference. The
+// `name`/`aliases` here are the single source the doc lists; a test
+// (function-catalogue.test.ts) cross-checks them against the `evalCall` switch so
+// adding a function without documenting it fails the build. Internal AST nodes
+// (num/ident/call/neg/list/range/where/given/convert/bin) and operators are not
+// functions and are excluded there.
+export interface FnDoc {
+	name: string;
+	aliases?: string[];
+	category: 'Distributions' | 'Reducers' | 'Math' | 'Trigonometry' | 'Inference' | 'Tiered';
+	sig: string;
+	summary: string;
+}
+export const FUNCTIONS: FnDoc[] = [
+	// Distributions
+	{
+		name: 'normal',
+		category: 'Distributions',
+		sig: 'normal(mean, sd)',
+		summary: 'Gaussian with the given mean and standard deviation.'
+	},
+	{
+		name: 'lognormal',
+		category: 'Distributions',
+		sig: 'lognormal(p5, p95)',
+		summary: 'Lognormal fitted to a 5th/95th-percentile range.'
+	},
+	{
+		name: 'uniform',
+		category: 'Distributions',
+		sig: 'uniform(lo, hi)',
+		summary: 'Flat distribution between two bounds.'
+	},
+	{
+		name: 'beta',
+		category: 'Distributions',
+		sig: 'beta(a, b)',
+		summary: 'Beta distribution (dimensionless); a/b are pseudo-counts.'
+	},
+	{
+		name: 'pert',
+		category: 'Distributions',
+		sig: 'pert(lo, ml, hi)',
+		summary: 'Three-point beta-PERT estimate (low, most-likely, high).'
+	},
+	{
+		name: 'triangular',
+		category: 'Distributions',
+		sig: 'triangular(lo, ml, hi)',
+		summary: 'Three-point triangular estimate; flatter than pert.'
+	},
+	{
+		name: 'exponential',
+		category: 'Distributions',
+		sig: 'exponential(mean)',
+		summary: 'Wait time between events; carries the mean’s units.'
+	},
+	{
+		name: 'poisson',
+		category: 'Distributions',
+		sig: 'poisson(mean)',
+		summary: 'Whole count of events at the given mean rate.'
+	},
+	{
+		name: 'discrete',
+		category: 'Distributions',
+		sig: 'discrete(w1: v1, w2: v2, …)',
+		summary: 'Weighted scenarios (or equal-weight from a list).'
+	},
+	{
+		name: 'mixture',
+		category: 'Distributions',
+		sig: 'mixture(d1, d2, …)',
+		summary: 'Equal-weight (or weighted) mix of like-dimensioned distributions.'
+	},
+	{
+		name: 'ci',
+		category: 'Distributions',
+		sig: 'ci(lo, hi[, level])',
+		summary: 'Confidence interval as a function — the `lo to hi` form, with an optional level.'
+	},
+	// Reducers
+	{
+		name: 'mean',
+		category: 'Reducers',
+		sig: 'mean(d)',
+		summary: 'Average of a distribution (exact for known families).'
+	},
+	{
+		name: 'median',
+		category: 'Reducers',
+		sig: 'median(d)',
+		summary: 'Middle value (50th percentile).'
+	},
+	{
+		name: 'sd',
+		aliases: ['stdev'],
+		category: 'Reducers',
+		sig: 'sd(d)',
+		summary: 'Standard deviation.'
+	},
+	{
+		name: 'p',
+		aliases: ['percentile'],
+		category: 'Reducers',
+		sig: 'p(d, q)',
+		summary: 'The q-quantile, q in 0…1.'
+	},
+	{ name: 'min', category: 'Reducers', sig: 'min(d) / min(list)', summary: 'Smallest value.' },
+	{ name: 'max', category: 'Reducers', sig: 'max(d) / max(list)', summary: 'Largest value.' },
+	{
+		name: 'sum',
+		category: 'Reducers',
+		sig: 'sum(list) / sum(above)',
+		summary: 'Total of a list, or of preceding result lines.'
+	},
+	{
+		name: 'chance',
+		category: 'Reducers',
+		sig: 'chance(pred)',
+		summary: 'Probability a predicate holds (mean of a 0/1 mask).'
+	},
+	// Math
+	{ name: 'sqrt', category: 'Math', sig: 'sqrt(x)', summary: 'Square root.' },
+	{ name: 'abs', category: 'Math', sig: 'abs(x)', summary: 'Absolute value.' },
+	{ name: 'ceil', category: 'Math', sig: 'ceil(x)', summary: 'Round up to an integer.' },
+	{ name: 'floor', category: 'Math', sig: 'floor(x)', summary: 'Round down to an integer.' },
+	{ name: 'round', category: 'Math', sig: 'round(x)', summary: 'Round to the nearest integer.' },
+	{ name: 'exp', category: 'Math', sig: 'exp(x)', summary: 'e to the power x (dimensionless).' },
+	{
+		name: 'ln',
+		aliases: ['log'],
+		category: 'Math',
+		sig: 'ln(x)',
+		summary: 'Natural logarithm (dimensionless).'
+	},
+	{
+		name: 'log10',
+		category: 'Math',
+		sig: 'log10(x)',
+		summary: 'Base-10 logarithm (dimensionless).'
+	},
+	{
+		name: 'clamp',
+		category: 'Math',
+		sig: 'clamp(x, lo[, hi])',
+		summary: 'Keep x within bounds (2-arg = lower bound only).'
+	},
+	{
+		name: 'cagr',
+		category: 'Math',
+		sig: 'cagr(start, end, periods)',
+		summary: 'Compound growth rate per period, (end/start)^(1/n)−1.'
+	},
+	// Trigonometry
+	{
+		name: 'sin',
+		category: 'Trigonometry',
+		sig: 'sin(x)',
+		summary: 'Sine; argument in radians (`deg` works).'
+	},
+	{ name: 'cos', category: 'Trigonometry', sig: 'cos(x)', summary: 'Cosine; argument in radians.' },
+	{
+		name: 'tan',
+		category: 'Trigonometry',
+		sig: 'tan(x)',
+		summary: 'Tangent; argument in radians.'
+	},
+	{
+		name: 'asin',
+		category: 'Trigonometry',
+		sig: 'asin(x)',
+		summary: 'Inverse sine; returns radians.'
+	},
+	{
+		name: 'acos',
+		category: 'Trigonometry',
+		sig: 'acos(x)',
+		summary: 'Inverse cosine; returns radians.'
+	},
+	{
+		name: 'atan',
+		category: 'Trigonometry',
+		sig: 'atan(x)',
+		summary: 'Inverse tangent; returns radians.'
+	},
+	// Inference
+	{
+		name: 'update',
+		category: 'Inference',
+		sig: 'update(prior, k, n)',
+		summary:
+			'Bayesian update of a beta prior with k successes in n trials (also `prior seen k of n`).'
+	},
+	// Tiered
+	{
+		name: 'bracket',
+		category: 'Tiered',
+		sig: 'bracket(x, u1: r1, …[, total=yes])',
+		summary: 'Piecewise-constant tiers: marginal rate at x, or cumulative total with total=yes.'
+	}
+];
+
 // Reorder named arguments into canonical positional order. Positional args
 // (no name) fill slots in call order; named args fill their canonical slot.
 // Trailing params left unset are dropped (e.g. clamp's optional hi), so the

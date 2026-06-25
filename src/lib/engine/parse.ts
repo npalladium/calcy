@@ -65,7 +65,7 @@ const OPS = new Set(['+', '-', '*', '/', '^', '×', '÷']);
 
 // Words the parser treats specially, so they never act as an implicit-product
 // factor (`between`, `about`, `and`) or get read as a unit/variable.
-const KEYWORDS = new Set([
+export const KEYWORDS = new Set([
 	'in',
 	'to',
 	'per',
@@ -80,6 +80,10 @@ const KEYWORDS = new Set([
 	'where',
 	'via'
 ]);
+
+// Line-leading directives (matched in parseLine, not the expression grammar).
+// Exported so the generated reference can enumerate them alongside KEYWORDS.
+export const DIRECTIVES = ['unit', 'currency', 'bridge'] as const;
 
 // Spelled-out cardinals, so a non-technical user can write `two days`. Tens and
 // ones combine (`twenty five`, `twenty-five`); scales multiply (`two hundred`,

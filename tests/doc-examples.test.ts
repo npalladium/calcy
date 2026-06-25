@@ -63,3 +63,57 @@ describe('Guide code examples evaluate as documented', () => {
 		prefix = fullSource;
 	});
 });
+
+// The Reference and How-it-works docs aren't line-for-line copy-pasteable the way
+// the Guide is: they include signature templates (`normal(mean, sd)`,
+// `clamp(x, lo[, hi])`) and placeholders that reference names defined in prose.
+// So instead of requiring every line to evaluate, we validate every line that
+// makes a *claim*:
+//   - a `-> result` annotation must evaluate without error, and for a
+//     deterministic result its display must match (distributions are sample-noisy,
+//     so we assert only that they evaluate);
+//   - a line whose comment says `ERROR` must actually error.
+// Lines with no annotation (signatures, placeholders, prose) are left alone.
+
+// Match a result annotation: a comment whose text begins with an arrow. This
+// skips prose like `# compose dimensions -> speed` (the `->` isn't first).
+const RESULT_ANNOT = /#\s*(?:->|→)\s*(.+?)\s*$/;
+
+// The annotation is `value` optionally trailed by `  (prose)`. The value may
+// contain single spaces (`€1,414 (€1,000 ... €2,000)`); prose is set off by 2+.
+function expectedValue(annot: string): string {
+	return annot.split(/\s{2,}/)[0].trim();
+}
+
+for (const file of ['reference.md', 'how-it-works.md']) {
+	describe(`${file} worked examples`, () => {
+		const md = readFileSync(new URL(`../src/lib/docs/${file}`, import.meta.url), 'utf8');
+		const blocks = fencedBlocks(md);
+
+		it('reads the doc', () => {
+			expect(md.length).toBeGreaterThan(0);
+		});
+
+		blocks.forEach((block, bi) => {
+			it(`block ${bi + 1} backs its claims`, () => {
+				const raw = block.split('\n');
+				const sources = raw.map((l) => l.replace(/#.*$/, '').trimEnd());
+				const res = lines(sources.join('\n'), { numberFormat: 'auto' });
+				raw.forEach((line, li) => {
+					if (sources[li].trim() === '') return;
+					const r = res.find((x) => x.index === li);
+					if (/#.*\bERROR\b/.test(line)) {
+						expect(r?.error, `"${sources[li]}" should error but didn't`).toBeTruthy();
+						return;
+					}
+					const m = line.match(RESULT_ANNOT);
+					if (!m) return; // signature / placeholder / prose-only comment
+					expect(r?.error, `"${sources[li]}" errored: ${r?.error}`).toBeFalsy();
+					if (!r?.isDist) {
+						expect(r?.display?.text, `"${sources[li]}"`).toBe(expectedValue(m[1]));
+					}
+				});
+			});
+		});
+	});
+}

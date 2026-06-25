@@ -90,7 +90,10 @@ revenue = price * qty where price = 10 to 20, qty = 100   # one-off locals, kept
 
 ### How uncertainty behaves
 
-- All arithmetic is Monte-Carlo (default **N = 10 000** samples).
+- Arithmetic is **Monte-Carlo by default** (**N = 10 000** samples), with an
+  analytical fast path: when a result stays in a known family (normal, lognormal,
+  scalar × distribution), `mean` and percentiles come back exact rather than
+  sampled.
 - **Correlation by reuse:** a variable stores its sample array, so `x - x` is
   exactly `0` and `x + x` is `2x` (same draws). Distinct distributions are
   independent.
@@ -111,8 +114,8 @@ a postfix:
 ```
 1234.5 $            # -> $1,234.50
 $1234.5             # -> $1,234.50   (prefix works too)
-₹2,500,000          # -> ₹2,500,000.00
-(1000 to 2000) €    # -> €1,500.00 (€1,000.00 ... €2,000.00)   (median + 90% CI)
+₹2500000            # -> ₹2,500,000.00   (no commas in input; they're added on output)
+(1000 to 2000) €    # -> ~€1,414 (€1,000 ... €2,000)   (median + 90% CI; lognormal, so the centre is the geometric mean, not €1,500)
 ```
 
 Sign goes before the symbol (`-$42.00`), and `in $` still works for pinning.
@@ -260,13 +263,147 @@ linear units:
 ```
 30 dBm in W              # -> 1 W          (0 dBm = 1 mW; every +10 dB is x10 power)
 0.1 W in dBm             # -> 20 dBm
-3 dB                     # -> 1.995        (a bare dB is a dimensionless power ratio)
+3 dB                     # -> 2            (≈1.995, a bare dB is a dimensionless power ratio)
 2 in dB                  # -> 3.01 dB
 ```
 
 Because levels linearise, combine gains and losses with `*` and `/` (not `+`/`-`):
 `0.1 W * (12 dB) / (80 dB) in dBm` is a link budget. Amplitude/voltage decibels
 (`dBV`, factor 20) are not yet included.
+
+<!-- BEGIN GENERATED CATALOGUE -->
+
+<!-- Auto-generated from units.ts / eval.ts / parse.ts. Do not edit by hand —
+     run `pnpm gen:reference`. Guarded by tests/reference-catalogue.test.ts. -->
+
+## Catalogue
+
+A complete index, generated from the engine’s own tables, so it always matches what calcy actually accepts.
+
+### Units
+
+Every unit calcy ships with, grouped by quantity. A `\*` marks a metric unit that also accepts the full set of SI prefixes (`k`, `M`, `G`, `m`, `µ`, …). Names in parentheses are accepted synonyms.
+
+- **Length** — `m`\* (meter, meters, metre, metres) · `km` (kilometer, kilometers) · `cm` (centimeter, centimeters) · `mm` (millimeter, millimeters) · `micron` (microns) · `angstrom` (angstroms, Å, Å) · `fermi` · `inch` (inches) · `mil` (thou) · `ft` (foot, feet) · `yd` (yard, yards) · `mi` (mile, miles) · `nmi` (nauticalmile, nauticalmiles) · `furlong` (furlongs) · `chain` (chains) · `rod` (rods, perch, pole) · `fathom` (fathoms) · `league` (leagues) · `pt` (point, points) · `pica` (picas) · `au` (AU, astronomicalunit) · `ly` (lightyear, lightyears) · `pc` (parsec, parsecs)
+- **Area** — `m2` (sqm) · `km2` (sqkm) · `cm2` · `ha` (hectare, hectares) · `are` (ares) · `acre` (acres) · `barn` (barns) · `sqft` (sqfeet) · `sqmi` · `sqin`
+- **Volume** — `m3` (cum) · `cc` (cm3) · `L`\* (l, liter, liters, litre, litres) · `mL` (ml, milliliter, milliliters) · `cL` (cl) · `dL` (dl) · `gal` (gallon, gallons) · `galuk` (impgal) · `qt` (quart, quarts) · `pint` (pints, pt_us) · `cup` (cups) · `floz` (fluidounce) · `tbsp` (tablespoon) · `tsp` (teaspoon) · `bbl` (barrel, barrels)
+- **Mass** — `kg` (kilogram, kilograms) · `g`\* (gram, grams, gramme, grammes) · `t` (tonne, tonnes, metricton) · `lb` (lbs, pound, pounds) · `oz` (ounce, ounces) · `st` (stone, stones) · `grain` (grains) · `ct` (carat, carats) · `slug` (slugs) · `ton` (tons, shortton) · `longton` · `amu` (dalton, daltons, Da)
+- **Time** — `s`\* (sec, secs, second, seconds) · `ms` (millisecond, milliseconds) · `min` (minute, minutes) · `h` (hr, hrs, hour, hours) · `day` (days, d) · `week` (weeks, wk) · `fortnight` (fortnights) · `month` (months, mo) · `year` (years, yr, yrs, y) · `decade` (decades) · `century` (centuries) · `millennium` (millennia)
+- **Frequency** — `Hz`\* · `hertz` · `rpm` · `bpm`
+- **Speed & acceleration** — `kph` (kmh, kmph) · `mph` · `fps` · `knot` (knots, kn, kt) · `mach` · `gal_accel` (galileo)
+- **Force** — `N`\* · `newton` (newtons) · `dyn` (dyne, dynes) · `lbf` (poundforce) · `kgf` (kilogramforce) · `kip`
+- **Pressure** — `Pa`\* · `pascal` (pascals) · `bar` (bars) · `mbar` (millibar) · `atm` (atmosphere, atmospheres) · `psi` · `barg` · `psig` · `bara` · `psia` · `torr` · `mmHg` · `inHg`
+- **Energy** — `J`\* · `joule` (joules) · `erg` (ergs) · `cal` (calorie, calories) · `kcal` (Cal, kilocalorie) · `eV`\* (electronvolt) · `Wh` (watthour) · `kWh` (kilowatthour) · `MWh` · `GWh` · `BTU` (btu) · `therm` (therms) · `tonTNT` (tonsTNT)
+- **Power** — `W`\* · `watt` (watts) · `hp` (horsepower) · `PS` (metrichorsepower)
+- **Electrical & magnetic** — `A`\* · `amp` (amps, ampere, amperes) · `C`\* · `coulomb` (coulombs) · `Ah` (amphour) · `mAh` · `V`\* · `volt` (volts) · `ohm`\* · `Ω` (Ω, ohms) · `S`\* · `siemens` (mho) · `F`\* · `farad` (farads) · `H`\* · `henry` (henries) · `Wb`\* · `weber` (webers) · `T`\* · `tesla` (teslas) · `G_gauss` (gauss) · `dB` (decibel, decibels) · `dBm` · `dBW`
+- **Temperature** — `K`\* (kelvin, kelvins) · `°C` (degC, celsius, Celsius) · `°F` (degF, fahrenheit, Fahrenheit) · `deltaC` (Cdeg, Δ°C, ΔC) · `deltaF` (Fdeg, Δ°F, ΔF) · `rankine` (degR)
+- **Amount** — `mol`\* · `mole` (moles)
+- **Light** — `cd`\* · `candela` (candelas) · `lm`\* · `lumen` (lumens) · `lx`\* · `lux`
+- **Radiation** — `Bq`\* · `becquerel` · `Ci` (curie) · `Gy`\* · `gray` · `Sv`\* · `sievert` (sieverts)
+- **Data** — `bit` (bits, b) · `B` (byte, bytes, octet, octets) · `nibble` (nybble) · `word` · `Qbit` (Qb) · `QB` · `Rbit` (Rb) · `RB` · `Ybit` (Yb) · `YB` · `Zbit` (Zb) · `ZB` · `Ebit` (Eb) · `EB` · `Pbit` (Pb) · `PB` · `Tbit` (Tb) · `TB` · `Gbit` (Gb) · `GB` · `Mbit` (Mb) · `MB` · `kbit` (kb) · `kB` · `KB` · `Kibit` · `KiB` · `Mibit` · `MiB` · `Gibit` · `GiB` · `Tibit` · `TiB` · `Pibit` · `PiB` · `Eibit` · `EiB` · `bps` · `kbps` · `Mbps` · `Gbps`
+- **Angle** — `rad` (radian, radians) · `deg` (degree, degrees, °) · `grad` (gradian, gon) · `arcmin` (arcminute) · `arcsec` (arcsecond) · `turn` (turns, rev, revolution, revolutions) · `sr` (steradian)
+- **Ratios** — `percent` (%) · `permille` (‰) · `ppm` · `pphm` · `ppb` · `ppt`
+- **Counts** — `req` (reqs, request, requests) · `event` (events, evt) · `error` (errors, err) · `query` (queries, qry) · `op` (ops, operation, operations) · `msg` (msgs, message, messages) · `user` (users) · `hit` (hits) · `item` (items) · `click` (clicks) · `call` (calls) · `view` (views, impression, impressions) · `transaction` (transactions, txn, txns) · `packet` (packets, pkt) · `job` (jobs, task, tasks) · `count` (counts, thing, things, piece, pieces) · `dozen` (dozens) · `gross` · `score` · `thousand` · `million` · `billion` · `avogadro`
+- **Currency** — `$` (usd, USD, dollar, dollars) · `cent` (cents) · `k$` (K$) · `€` (eur, EUR, euro, euros) · `£` (gbp, GBP, pound_sterling) · `¥` (jpy, JPY, yen) · `₹` (inr, INR, rupee, rupees)
+- **Carbon** — `gCO2` (gCO2e) · `kgCO2` (kgCO2e) · `tCO2` (tCO2e, tonneCO2)
+
+### Named constants
+
+`pi` (π) · `tau` (τ) · `e` (euler) · `c` (lightspeed) · `gravity` (g0, standardgravity) · `G_grav` (gravitationalconstant)
+
+### Keywords & directives
+
+Reserved words — don’t use them as variable names.
+
+| Keyword | Meaning |
+|---|---|
+| `in` | convert units, and pin the output unit |
+| `to` | build a confidence-interval range (`lo to hi`) |
+| `per` | rate connector — `12 req per second` (same as `/`) |
+| `and` | join spelled-out numbers, and `between A and B` |
+| `between` | `between A and B` — a natural 90% range |
+| `about` | rough estimate, ±10% (also `~`) |
+| `of` | `X of Y` multiplies; `f of x` calls a one-arg function |
+| `step` | stepped range — `1..10 step 2` |
+| `seen` | Bayesian update — `prior seen k of n` |
+| `given` | condition a distribution — `d given pred`; `beta given k of n` |
+| `every` | reserved for a future per-window operator (not yet bound) |
+| `where` | one-off locals for a line — `expr where a = 1, b = 2` |
+| `via` | pick a named bridge for a conversion — `in INR via fx` |
+| `unit` | define your own unit — `unit sprint = 2 week` |
+| `currency` | mint a currency dimension — `currency BTC, bitcoin` |
+| `bridge` | name an exchange rate — `bridge fx = 83 ₹/$` |
+
+### Functions
+
+**Distributions**
+
+| Call | What it does |
+|---|---|
+| `normal(mean, sd)` | Gaussian with the given mean and standard deviation. |
+| `lognormal(p5, p95)` | Lognormal fitted to a 5th/95th-percentile range. |
+| `uniform(lo, hi)` | Flat distribution between two bounds. |
+| `beta(a, b)` | Beta distribution (dimensionless); a/b are pseudo-counts. |
+| `pert(lo, ml, hi)` | Three-point beta-PERT estimate (low, most-likely, high). |
+| `triangular(lo, ml, hi)` | Three-point triangular estimate; flatter than pert. |
+| `exponential(mean)` | Wait time between events; carries the mean’s units. |
+| `poisson(mean)` | Whole count of events at the given mean rate. |
+| `discrete(w1: v1, w2: v2, …)` | Weighted scenarios (or equal-weight from a list). |
+| `mixture(d1, d2, …)` | Equal-weight (or weighted) mix of like-dimensioned distributions. |
+| `ci(lo, hi[, level])` | Confidence interval as a function — the `lo to hi` form, with an optional level. |
+
+**Reducers**
+
+| Call | What it does |
+|---|---|
+| `mean(d)` | Average of a distribution (exact for known families). |
+| `median(d)` | Middle value (50th percentile). |
+| `sd(d)` _(alias: `stdev`)_ | Standard deviation. |
+| `p(d, q)` _(alias: `percentile`)_ | The q-quantile, q in 0…1. |
+| `min(d) / min(list)` | Smallest value. |
+| `max(d) / max(list)` | Largest value. |
+| `sum(list) / sum(above)` | Total of a list, or of preceding result lines. |
+| `chance(pred)` | Probability a predicate holds (mean of a 0/1 mask). |
+
+**Math**
+
+| Call | What it does |
+|---|---|
+| `sqrt(x)` | Square root. |
+| `abs(x)` | Absolute value. |
+| `ceil(x)` | Round up to an integer. |
+| `floor(x)` | Round down to an integer. |
+| `round(x)` | Round to the nearest integer. |
+| `exp(x)` | e to the power x (dimensionless). |
+| `ln(x)` _(alias: `log`)_ | Natural logarithm (dimensionless). |
+| `log10(x)` | Base-10 logarithm (dimensionless). |
+| `clamp(x, lo[, hi])` | Keep x within bounds (2-arg = lower bound only). |
+| `cagr(start, end, periods)` | Compound growth rate per period, (end/start)^(1/n)−1. |
+
+**Trigonometry**
+
+| Call | What it does |
+|---|---|
+| `sin(x)` | Sine; argument in radians (`deg` works). |
+| `cos(x)` | Cosine; argument in radians. |
+| `tan(x)` | Tangent; argument in radians. |
+| `asin(x)` | Inverse sine; returns radians. |
+| `acos(x)` | Inverse cosine; returns radians. |
+| `atan(x)` | Inverse tangent; returns radians. |
+
+**Inference**
+
+| Call | What it does |
+|---|---|
+| `update(prior, k, n)` | Bayesian update of a beta prior with k successes in n trials (also `prior seen k of n`). |
+
+**Tiered**
+
+| Call | What it does |
+|---|---|
+| `bracket(x, u1: r1, …[, total=yes])` | Piecewise-constant tiers: marginal rate at x, or cumulative total with total=yes. |
+
+<!-- END GENERATED CATALOGUE -->
 
 ## Defined constants & conventions
 
@@ -287,12 +424,12 @@ settings.
 ```
 # capacity
 rate = 12_000 req/s
-rate in req/day          # -> 1.04e9 req/day
-rate * 30 day            # -> 3.11e10 req            (accumulation)
+rate in req/day          # -> 1.04B req/day
+rate * 30 day            # -> 31.1B req              (accumulation)
 
 # uncertain rate + accumulation
 load = (800 to 1200) req/s
-load * 1 month           # -> ~2.1e9 to 3.2e9 req    (distribution)
+load * 1 month           # -> ~2.1B to 3.2B req      (distribution)
 
 # storage accrual
 write = (2 to 5) MB/s
@@ -300,7 +437,7 @@ write * 1 day in TB      # -> ~0.17 to 0.43 TB
 
 # correlation via reuse
 x = 1 to 10
-x - x                    # -> 0 (exactly), not a spread
+x - x                    # -> 0    (exactly), not a spread
 
 # money formatting
 price = 1234.5 $
