@@ -189,6 +189,7 @@ function persistLayout() {
 				onresize={(dx) => {
 					onEditorResize(dx);
 				}}
+				onresizeend={persistLayout}
 				onlefttoggle={() => c.toggleEditor()}
 				onrighttoggle={() => c.toggleGutter()}
 			/>
@@ -202,6 +203,7 @@ function persistLayout() {
 				onresize={(dx) => {
 					onGutterResize(dx);
 				}}
+				onresizeend={persistLayout}
 				onlefttoggle={() => c.toggleGutter()}
 				onrighttoggle={() => c.toggleInspector()}
 			/>
@@ -242,8 +244,6 @@ function persistLayout() {
 		<HistoryPanel {c} />
 	{/if}
 </div>
-
-<svelte:document onmouseup={persistLayout} ontouchend={persistLayout} />
 
 <style>
 	.app {

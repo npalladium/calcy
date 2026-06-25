@@ -1,0 +1,149 @@
+// Layout interactions for the notepad shell: the two column splitters can be
+// dragged to resize the adjacent columns, and their chevrons collapse/expand a
+// column to/from zero width. State persists to the DB and survives reload.
+//
+// The chevrons live inside the splitter and are opacity-0 until hover, so we
+// scope by position: the first .splitter sits between editor and gutter, the
+// second between gutter and inspector.
+
+import { expect, test, type Page } from '@playwright/test';
+
+async function boot(page: Page) {
+	await page.goto('/');
+	// Editor (CodeMirror) mounting signals the notepad shell is live.
+	await page.locator('.cm-editor').first().waitFor({ state: 'visible' });
+	// Both splitters present means we're in notepad mode with all columns shown.
+	await expect(page.locator('.splitter')).toHaveCount(2);
+}
+
+function colWidth(page: Page, selector: string) {
+	return page
+		.locator(selector)
+		.evaluate((el) => Math.round(el.getBoundingClientRect().width));
+}
+
+// Chevrons are hover-revealed (opacity 0 + pointer-events: none at rest) and
+// only become interactive once their splitter is hovered — exactly as a real
+// user reveals them before clicking. So hover the splitter first, then click
+// the chevron. (A collapsed column's re-expand chevron stays visible, but
+// hovering first is harmless there too.)
+async function clickChevron(page: Page, splitterIndex: number, side: 'left' | 'right') {
+	const splitter = page.locator('.splitter').nth(splitterIndex);
+	await splitter.hover();
+	await splitter.locator(`.chevron.${side}`).click();
+}
+
+// Layout settings are written to the OPFS-backed DB worker as a fire-and-forget
+// async call. A reload fired too soon can outrun the SAH-pool write commit, so
+// give the round-trip a beat to flush before navigating. (A real user never
+// reloads within a few hundred ms of resizing; this is a test-only settle.)
+async function flushPersistence(page: Page) {
+	await page.waitForTimeout(500);
+}
+
+test.describe('column collapse via chevrons', () => {
+	test('right chevron of the first splitter collapses and re-expands the gutter', async ({
+		page
+	}) => {
+		await boot(page);
+		const gutterBefore = await colWidth(page, '.gutter-col');
+		expect(gutterBefore).toBeGreaterThan(0);
+
+		// Collapse the gutter (right column of splitter 1).
+		await clickChevron(page, 0, 'right');
+		await expect(page.locator('.body')).toHaveClass(/gutter-collapsed/);
+		expect(await colWidth(page, '.gutter-col')).toBe(0);
+
+		// Re-expand it.
+		await clickChevron(page, 0, 'right');
+		await expect(page.locator('.body')).not.toHaveClass(/gutter-collapsed/);
+		expect(await colWidth(page, '.gutter-col')).toBeGreaterThan(0);
+	});
+
+	test('left chevron of the first splitter collapses the editor', async ({ page }) => {
+		await boot(page);
+		expect(await colWidth(page, '.editor')).toBeGreaterThan(0);
+
+		await clickChevron(page, 0, 'left');
+		await expect(page.locator('.body')).toHaveClass(/editor-collapsed/);
+		expect(await colWidth(page, '.editor')).toBe(0);
+	});
+
+	test('collapse state persists across reload', async ({ page }) => {
+		await boot(page);
+		await clickChevron(page, 0, 'right');
+		await expect(page.locator('.body')).toHaveClass(/gutter-collapsed/);
+		await flushPersistence(page);
+
+		await page.reload();
+		await page.locator('.cm-editor').first().waitFor({ state: 'visible' });
+		await expect(page.locator('.body')).toHaveClass(/gutter-collapsed/);
+		expect(await colWidth(page, '.gutter-col')).toBe(0);
+	});
+});
+
+test.describe('draggable resize', () => {
+	test('dragging the first splitter right widens the editor and narrows the gutter', async ({
+		page
+	}) => {
+		await boot(page);
+		const editorBefore = await colWidth(page, '.editor');
+		const gutterBefore = await colWidth(page, '.gutter-col');
+
+		const splitter = page.locator('.splitter').first();
+		const box = (await splitter.boundingBox())!;
+		const startX = box.x + box.width / 2;
+		// Grab near the top of the splitter, clear of the vertically-centred
+		// chevron buttons.
+		const y = box.y + 12;
+		const dx = 80;
+
+		await page.mouse.move(startX, y);
+		await page.mouse.down();
+		await page.mouse.move(startX + dx, y, { steps: 10 });
+		await page.mouse.up();
+
+		const editorAfter = await colWidth(page, '.editor');
+		const gutterAfter = await colWidth(page, '.gutter-col');
+
+		expect(editorAfter).toBeGreaterThan(editorBefore + 40);
+		expect(gutterAfter).toBeLessThan(gutterBefore - 40);
+		// The drag conserves width between the two columns (inspector untouched).
+		expect(editorAfter - editorBefore).toBeCloseTo(gutterBefore - gutterAfter, -1);
+	});
+
+	test('resized widths persist across reload', async ({ page }) => {
+		await boot(page);
+		const splitter = page.locator('.splitter').first();
+		const box = (await splitter.boundingBox())!;
+		const startX = box.x + box.width / 2;
+		// Grab near the top of the splitter, clear of the vertically-centred
+		// chevron buttons.
+		const y = box.y + 12;
+
+		await page.mouse.move(startX, y);
+		await page.mouse.down();
+		await page.mouse.move(startX + 80, y, { steps: 10 });
+		await page.mouse.up();
+
+		const editorAfter = await colWidth(page, '.editor');
+		await flushPersistence(page);
+
+		await page.reload();
+		await page.locator('.cm-editor').first().waitFor({ state: 'visible' });
+		expect(await colWidth(page, '.editor')).toBeCloseTo(editorAfter, -1);
+	});
+
+	test('the splitter is keyboard-resizable via arrow keys', async ({ page }) => {
+		await boot(page);
+		const editorBefore = await colWidth(page, '.editor');
+
+		const splitter = page.locator('.splitter').first();
+		await splitter.focus();
+		// ArrowRight widens the editor by 8px per press (32 with Shift).
+		await splitter.press('ArrowRight');
+		await splitter.press('Shift+ArrowRight');
+
+		expect(await colWidth(page, '.editor')).toBe(editorBefore + 8 + 32);
+	});
+});

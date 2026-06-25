@@ -18,6 +18,7 @@ let {
 	rightCollapsed = false,
 	collapsible = true,
 	onresize,
+	onresizeend,
 	onlefttoggle,
 	onrighttoggle
 }: {
@@ -26,6 +27,11 @@ let {
 	rightCollapsed?: boolean;
 	collapsible?: boolean;
 	onresize: (deltaPx: number) => void;
+	// Fired once a resize gesture commits (pointer release or keyboard step) so
+	// the parent can persist. A drag calls preventDefault on pointerdown, which
+	// suppresses the compatibility mouseup — so a document-level mouseup listener
+	// would never see a drag end. This explicit callback is the reliable signal.
+	onresizeend?: () => void;
 	onlefttoggle?: () => void;
 	onrighttoggle?: () => void;
 } = $props();
@@ -34,6 +40,10 @@ let dragging = $state(false);
 let lastX = 0;
 
 function onPointerDown(e: PointerEvent) {
+	// A pointerdown on a chevron must not start a drag: capturing the pointer
+	// here retargets the follow-up `click` to the splitter, so the button's
+	// onclick (the collapse toggle) would never fire. Let it through.
+	if ((e.target as HTMLElement).closest('.chevron')) return;
 	dragging = true;
 	lastX = e.clientX;
 	(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -49,15 +59,18 @@ function onPointerUp(e: PointerEvent) {
 	if (!dragging) return;
 	dragging = false;
 	(e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+	onresizeend?.();
 }
 function onKey(e: KeyboardEvent) {
 	const step = e.shiftKey ? 32 : 8;
 	if (e.key === 'ArrowLeft') {
 		e.preventDefault();
 		onresize(-step);
+		onresizeend?.();
 	} else if (e.key === 'ArrowRight') {
 		e.preventDefault();
 		onresize(step);
+		onresizeend?.();
 	}
 }
 function chevronClick(e: MouseEvent, fn?: () => void) {
@@ -155,24 +168,36 @@ function chevronClick(e: MouseEvent, fn?: () => void) {
 		line-height: 1;
 		cursor: pointer;
 		opacity: 0;
+		/* Hidden chevrons must not swallow clicks: when a column collapses to
+		   zero width its two flanking splitters become adjacent, so an
+		   invisible chevron from the neighbouring splitter can otherwise sit
+		   over the visible re-expand chevron. Re-enabled with opacity below. */
+		pointer-events: none;
 		transition: opacity 0.15s;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		z-index: 1;
 	}
+	/* Both chevrons centre on the same 6px-wide line, so they're stacked
+	   vertically (left above centre, right below) instead of overlapping —
+	   otherwise the later-in-DOM right chevron would intercept clicks meant
+	   for the left one. */
 	.chevron.left {
-		left: 0;
+		left: 50%;
+		top: calc(50% - 16px);
 		transform: translate(-50%, -50%);
 	}
 	.chevron.right {
-		right: 0;
-		transform: translate(50%, -50%);
+		left: 50%;
+		top: calc(50% + 16px);
+		transform: translate(-50%, -50%);
 	}
 	.splitter:hover .chevron,
 	.splitter:focus-within .chevron,
 	.chevron.visible {
 		opacity: 1;
+		pointer-events: auto;
 	}
 	.chevron:hover {
 		color: var(--text);
