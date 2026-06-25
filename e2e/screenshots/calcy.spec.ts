@@ -83,7 +83,7 @@ test.describe('calcy screenshots', () => {
 	test('templates — starter gallery on an empty sheet', async ({ page }) => {
 		await loadSheet(page, '');
 		await page.locator('.tpl').first().waitFor({ state: 'visible' });
-		await expect(page.locator('.tpl')).toHaveCount(6);
+		await expect(page.locator('.tpl')).toHaveCount(9);
 		const shot = await capture(page, 'templates-gallery', { clip: '.pad' });
 		await expectScreenshotWritten(shot.filePath);
 		// clicking a template loads it into the editor
@@ -94,21 +94,25 @@ test.describe('calcy screenshots', () => {
 	test('templates — toolbar panel', async ({ page }) => {
 		await loadSheet(page, '5 km + 3 mi'); // a non-empty sheet
 		await page.getByRole('button', { name: 'Examples' }).click();
-		await expect(page.locator('.panel.templates .open')).toHaveCount(6);
-		const shot = await capture(page, 'templates-panel', { clip: '.panel.templates' });
+		// The toolbar Examples panel is a FloatingPanel (.float); its entries are
+		// EntryList buttons (.open).
+		await expect(page.locator('.float .open')).toHaveCount(9);
+		const shot = await capture(page, 'templates-panel', { clip: '.float' });
 		await expectScreenshotWritten(shot.filePath);
 		// picking one from a non-empty sheet starts a fresh sheet (no clobber)
-		await page.locator('.panel.templates .open', { hasText: 'Fermi estimate' }).click();
+		await page.locator('.float .open', { hasText: 'Fermi estimate' }).click();
 		await expect(page.locator('.cm-content')).toContainText('piano tuners');
 	});
 
 	test('newspaper number format', async ({ page }) => {
 		await loadSheet(page, 'rate = 50000 req/s\nrate * 1 year');
 		await page.locator('.gutter .row').first().waitFor({ state: 'visible' });
-		// Open settings, pick the spelled-out style, close settings.
-		await page.locator('[aria-label="settings"]').click();
+		// Open settings, pick the spelled-out style, close settings. Scope to the
+		// button: the open panel is a <section aria-label="settings"> too, so a bare
+		// [aria-label="settings"] would match two elements.
+		await page.getByRole('button', { name: 'settings' }).click();
 		await page.getByRole('group', { name: 'number format' }).getByText('1 million').click();
-		await page.locator('[aria-label="settings"]').click();
+		await page.getByRole('button', { name: 'settings' }).click();
 		// The accumulated total is ~1.58e12 req → "1.58 trillion req".
 		await expect(page.locator('.gutter')).toContainText(/trillion/i);
 		const shot = await capture(page, 'newspaper-format', { clip: '.pad' });
