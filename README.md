@@ -1,4 +1,4 @@
-# calcy — an uncertainty-aware unit calculator
+# calcy — unit-aware, uncertainty-propagating calculator
 
 [![Live demo](https://img.shields.io/badge/demo-live-7c3aed?style=flat-square)](https://npalladium.github.io/calcy/)
 [![License](https://img.shields.io/badge/license-GPLv3-blue?style=flat-square)](LICENSE)

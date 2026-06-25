@@ -30,7 +30,11 @@ const stat = (label: string) => stats.find((s) => s.label === label)?.value;
 				Always <strong>{line.display?.text}</strong>—no variation.
 			</p>
 		{/if}
-		<Sparkline hist={dist.hist} width={280} height={64} />
+		<!-- Skip the histogram when there's no spread: a degenerate distribution is
+		     a single full-height bar that reads as a glitch rather than a shape. -->
+		{#if dist.min !== dist.max}
+			<Sparkline hist={dist.hist} width={280} height={64} />
+		{/if}
 		<details>
 			<summary>All statistics</summary>
 			<table>

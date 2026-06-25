@@ -10,6 +10,7 @@
 // the component lifecycle), then call `boot()` from onMount to spin up the
 // workers and load persisted state.
 
+import { replaceState } from '$app/navigation';
 import { DbClient, type RevisionItem, type SheetListItem } from '$lib/db/client';
 import { setLineConversion } from '$lib/editor';
 import type { LineResult, NumberFormat, RatePeriod } from '$lib/engine';
@@ -42,7 +43,7 @@ const MIN_LAYOUT_EDITOR = 240;
 const MIN_LAYOUT_GUTTER = 160;
 const MIN_LAYOUT_INSPECTOR = 280;
 const DEFAULT_LAYOUT_EDITOR = 420;
-const DEFAULT_LAYOUT_GUTTER = 280;
+const DEFAULT_LAYOUT_GUTTER = 340;
 const DEFAULT_LAYOUT_INSPECTOR = 360;
 
 export class SheetController {
@@ -70,7 +71,7 @@ export class SheetController {
 	// ~1024px viewport with the inspector still readable; the page clamps
 	// during drag so they always sum to fit the window.
 	editorWidth = $state(420);
-	gutterWidth = $state(280);
+	gutterWidth = $state(340);
 	inspectorWidth = $state(360);
 	// Collapse flags for each column. A collapsed column renders at 0 width;
 	// its splitter chevron flips to point outward and dragging it re-expands
@@ -193,7 +194,9 @@ export class SheetController {
 			this.body = shared.body;
 			this.seed = shared.seed;
 			await this.db.save({ id: this.sheetId, title: this.title, body: this.body, seed: this.seed });
-			history.replaceState(null, '', location.pathname + location.search);
+			// Strip the share fragment via SvelteKit's router-aware replaceState so we
+			// don't fight its history management (a raw history.replaceState warns).
+			replaceState(location.pathname + location.search, {});
 		} else {
 			const last = await this.db.loadLast();
 			if (last) this.adopt(last);

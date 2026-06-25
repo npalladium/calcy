@@ -28,23 +28,36 @@ function onImport(e: Event) {
 </script>
 
 <section class="panel settings" aria-label="settings">
-	<label>month = <input type="number" step="any" value={trim(c.monthDays)} onchange={(e) => { c.monthDays = +e.currentTarget.value; c.persistSetting('monthDays', String(c.monthDays)); }} /> day</label>
-	<label>year = <input type="number" step="any" value={trim(c.yearDays)} onchange={(e) => { c.yearDays = +e.currentTarget.value; c.persistSetting('yearDays', String(c.yearDays)); }} /> day</label>
-	<label>samples N = <input type="number" step="1000" bind:value={c.samples} onchange={() => c.persistSetting('samples', String(c.samples))} /></label>
-	<div class="fmt" role="group" aria-label="number format">
-		<span class="fmt-label">numbers</span>
-		{#each NUMBER_FORMATS as f (f.value)}
-			<button type="button" class:active={c.numberFormat === f.value} title={f.hint} onclick={() => c.setNumberFormat(f.value)}>{f.label}</button>
-		{/each}
+	<div class="grp">
+		<span class="grp-label">calendar</span>
+		<label>month <input type="number" step="any" value={trim(c.monthDays)} onchange={(e) => { c.monthDays = +e.currentTarget.value; c.persistSetting('monthDays', String(c.monthDays)); }} /> d</label>
+		<label>year <input type="number" step="any" value={trim(c.yearDays)} onchange={(e) => { c.yearDays = +e.currentTarget.value; c.persistSetting('yearDays', String(c.yearDays)); }} /> d</label>
 	</div>
-	<div class="ci" role="group" aria-label="confidence level">
-		<span class="fmt-label">CI</span>
+
+	<span class="divider" aria-hidden="true"></span>
+
+	<div class="grp" role="group" aria-label="sampling">
+		<span class="grp-label">sampling</span>
+		<label>N <input type="number" step="1000" bind:value={c.samples} onchange={() => c.persistSetting('samples', String(c.samples))} /></label>
+		<span class="sub">interval</span>
 		{#each [0.68, 0.9, 0.95, 0.99] as lv (lv)}
 			<button type="button" class:active={Math.abs(c.confidence - lv) < 1e-9} title={`'a to b' means ${(lv * 100).toFixed(0)}% CI`} onclick={() => c.setConfidence(lv)}>{(lv * 100).toFixed(0)}%</button>
 		{/each}
 	</div>
-	<div class="data-actions" role="group" aria-label="export and import">
-		<span class="fmt-label">export</span>
+
+	<span class="divider" aria-hidden="true"></span>
+
+	<div class="grp" role="group" aria-label="number format">
+		<span class="grp-label">numbers</span>
+		{#each NUMBER_FORMATS as f (f.value)}
+			<button type="button" class:active={c.numberFormat === f.value} title={f.hint} onclick={() => c.setNumberFormat(f.value)}>{f.label}</button>
+		{/each}
+	</div>
+
+	<span class="divider" aria-hidden="true"></span>
+
+	<div class="grp" role="group" aria-label="export and import">
+		<span class="grp-label">data</span>
 		<button type="button" onclick={() => c.exportTxt()}>.txt</button>
 		<button type="button" onclick={() => c.exportMd()}>.md</button>
 		<button type="button" onclick={() => c.exportCsv()}>.csv</button>
@@ -52,8 +65,11 @@ function onImport(e: Event) {
 		<button type="button" onclick={() => importInput?.click()}>Import .sqlite</button>
 		<input bind:this={importInput} type="file" accept=".sqlite" onchange={onImport} hidden />
 	</div>
-	<div class="units" role="group" aria-label="custom units">
-		<span class="fmt-label">custom units</span>
+
+	<span class="divider" aria-hidden="true"></span>
+
+	<div class="grp units" role="group" aria-label="custom units">
+		<span class="grp-label">units</span>
 		{#each Object.entries(c.customUnits) as [name, def] (name)}
 			<span class="chip" title={def}>{name}<button type="button" aria-label="remove {name}" onclick={() => c.removeCustomUnit(name)}>✕</button></span>
 		{/each}
@@ -66,11 +82,18 @@ function onImport(e: Event) {
 		<button type="button" onclick={() => c.applyCustomUnit()}>Add</button>
 		{#if c.unitError}<span class="unit-err">{c.unitError}</span>{/if}
 	</div>
-	<label class="debug-toggle">
-		<input type="checkbox" checked={c.debugAst} onchange={() => c.toggleDebug()} />
-		show parsed AST in result gutter <span class="kbd-inline">⌘D</span>
-	</label>
-	<span class="muted">seed {c.seedHex} · CI = {(c.confidence * 100).toFixed(0)}% · all compute is local</span>
+
+	<span class="divider" aria-hidden="true"></span>
+
+	<div class="grp">
+		<span class="grp-label">view</span>
+		<label class="debug-toggle">
+			<input type="checkbox" checked={c.debugAst} onchange={() => c.toggleDebug()} />
+			parsed AST in gutter <span class="kbd-inline">⌘D</span>
+		</label>
+	</div>
+
+	<span class="muted">seed {c.seedHex} · all compute is local</span>
 </section>
 
 <style>
@@ -79,7 +102,7 @@ function onImport(e: Event) {
 		background: var(--surface-1);
 		padding: 0.6rem 0.9rem;
 		display: flex;
-		gap: 1rem;
+		gap: 0.65rem;
 		flex-wrap: wrap;
 		align-items: center;
 	}
@@ -95,21 +118,33 @@ function onImport(e: Event) {
 		border-radius: 6px;
 		padding: 0.2rem 0.4rem;
 	}
-	.fmt,
-	.ci,
-	.data-actions {
+	/* Each setting cluster is a labelled group; thin dividers separate them so
+	   the strip scans as sections rather than one long flat row. */
+	.grp {
 		display: flex;
 		align-items: center;
 		gap: 0.3rem;
+		flex-wrap: wrap;
 	}
-	.fmt-label {
-		font-size: 0.85rem;
-		color: var(--text-2);
-		margin-right: 0.1rem;
+	.grp-label {
+		font-size: 0.66rem;
+		text-transform: uppercase;
+		letter-spacing: 0.07em;
+		color: var(--text-muted);
+		margin-right: 0.15rem;
 	}
-	.fmt button,
-	.ci button,
-	.data-actions button {
+	.sub {
+		font-size: 0.78rem;
+		color: var(--text-muted);
+		margin-left: 0.35rem;
+	}
+	.divider {
+		align-self: stretch;
+		width: 1px;
+		min-height: 1.3rem;
+		background: var(--border);
+	}
+	.grp > button {
 		background: var(--surface-2);
 		border: 1px solid var(--border-strong);
 		color: var(--text-2);
@@ -119,13 +154,10 @@ function onImport(e: Event) {
 		font-size: 0.8rem;
 		font-family: var(--font-mono);
 	}
-	.fmt button:hover,
-	.ci button:hover,
-	.data-actions button:hover {
+	.grp > button:hover {
 		border-color: var(--color-brand);
 	}
-	.fmt button.active,
-	.ci button.active {
+	.grp > button.active {
 		background: var(--color-brand);
 		color: var(--text);
 		border-color: var(--color-brand);
@@ -155,12 +187,6 @@ function onImport(e: Event) {
 		color: var(--text-2);
 		margin-left: 0.3rem;
 	}
-	.units {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		flex-wrap: wrap;
-	}
 	.unit-input {
 		width: 11rem;
 		background: var(--surface-2);
@@ -169,15 +195,6 @@ function onImport(e: Event) {
 		border-radius: 6px;
 		padding: 0.2rem 0.4rem;
 		font-family: var(--font-mono);
-		font-size: 0.8rem;
-	}
-	.units button {
-		background: var(--surface-2);
-		border: 1px solid var(--border-strong);
-		color: var(--text-2);
-		padding: 0.2rem 0.5rem;
-		border-radius: 6px;
-		cursor: pointer;
 		font-size: 0.8rem;
 	}
 	.chip {

@@ -36,7 +36,7 @@ export default defineConfig({
 			manifest: {
 				name: 'Calcy',
 				short_name: 'Calcy',
-				description: 'Unit-aware, uncertainty-aware notepad calculator',
+				description: 'Unit-aware, uncertainty-propagating notepad calculator',
 				display: 'standalone',
 				theme_color: '#8100ff',
 				background_color: '#0b0b0f',

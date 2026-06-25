@@ -31,9 +31,10 @@ const CARD = `<!doctype html><html><head><meta charset="utf-8" /><style>
     display: flex; flex-direction: column; justify-content: space-between;
     padding: 72px 80px;
   }
-  .top { display: flex; align-items: baseline; gap: 22px; }
-  .wordmark { font-size: 76px; font-weight: 800; letter-spacing: -0.03em; color: var(--violet); }
-  .tagline { font-size: 30px; font-weight: 500; color: var(--text-2); letter-spacing: -0.01em; }
+  .top { display: flex; flex-direction: column; gap: 14px; }
+  .wordmark { font-size: 84px; font-weight: 800; letter-spacing: -0.03em; color: var(--violet); line-height: 1; }
+  .tagline { font-size: 36px; font-weight: 500; color: var(--text-2); letter-spacing: -0.01em; }
+  .tagline .hl { color: var(--violet-soft); }
   .panel {
     background: linear-gradient(180deg, rgba(26,24,48,0.85), rgba(17,16,28,0.85));
     border: 1px solid var(--ink-3); border-radius: 18px;
@@ -55,7 +56,7 @@ const CARD = `<!doctype html><html><head><meta charset="utf-8" /><style>
   <div class="card">
     <div class="top">
       <div class="wordmark">calcy</div>
-      <div class="tagline">an uncertainty-aware unit calculator</div>
+      <div class="tagline">Unit-aware, <span class="hl">uncertainty-propagating</span> calculator</div>
     </div>
     <div class="panel">
       <div class="row"><span class="src">5 km + 3 mi</span><span class="res green">9.83 km</span></div>

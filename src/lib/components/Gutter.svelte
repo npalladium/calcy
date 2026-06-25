@@ -27,9 +27,18 @@ let {
 	showAst?: boolean;
 } = $props();
 
-const isEmpty = $derived(lines.length === 0);
+// "Has anything to show" — a sheet that's empty or only comments/blank lines
+// produces blank rows that render as a bare strip, so we show a hint instead.
+const hasResult = $derived(
+	lines.some((l) => !!l.error || l.kind === 'value' || l.kind === 'unitdef')
+);
+// Only sparkline a distribution that actually has spread. A degenerate one
+// (e.g. x − x, where correlation-by-reuse cancels to an exact value) collapses
+// to a single full-height bar that reads like a rendering glitch, not a shape.
 const distHist = (l: LineResult) =>
-	l.isDist && l.summary?.kind === 'dist' ? l.summary.hist : null;
+	l.isDist && l.summary?.kind === 'dist' && l.summary.min !== l.summary.max
+		? l.summary.hist
+		: null;
 const lineAst = (l: LineResult) => (showAst && l.ast ? astText(l.ast) : '');
 
 // Track which row was just copied (for the brief "✓" feedback). Cleared
@@ -53,8 +62,9 @@ export function setScrollTop(top: number) {
 }
 </script>
 
-<div class="gutter" bind:this={scrollEl} aria-hidden={isEmpty}>
-	{#each lines as l (l.index)}
+<div class="gutter" bind:this={scrollEl} aria-hidden={!hasResult}>
+	{#if hasResult}
+		{#each lines as l (l.index)}
 		<div
 			class="row"
 			class:err={!!l.error}
@@ -105,9 +115,13 @@ export function setScrollTop(top: number) {
 				<span class="ast" aria-label="parsed AST">{lineAst(l)}</span>
 			{/if}
 		</div>
+		{/each}
 	{:else}
-		<div class="empty">no lines yet</div>
-	{/each}
+		<div class="empty">
+			<p class="empty-title">Results appear here</p>
+			<p class="empty-sub">Type math on the left—each line's answer lands on this row.</p>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -241,8 +255,20 @@ export function setScrollTop(top: number) {
 		border-color: var(--color-brand);
 	}
 	.empty {
-		color: var(--text-faint);
+		margin: auto;
 		text-align: center;
 		padding: 1rem;
+		max-width: 22ch;
+	}
+	.empty-title {
+		margin: 0 0 0.35rem;
+		color: var(--text-muted);
+		font-size: 0.92rem;
+	}
+	.empty-sub {
+		margin: 0;
+		color: var(--text-faint);
+		font-size: 0.8rem;
+		line-height: 1.45;
 	}
 </style>
