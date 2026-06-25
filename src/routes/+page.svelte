@@ -3,10 +3,13 @@
 // compose the presentation components. All logic lives in SheetController and
 // the pure core under $lib/sheet/*; this file holds layout only.
 import { onMount } from 'svelte';
+import Footer from '$lib/components/Footer.svelte';
+import GuidePanel from '$lib/components/GuidePanel.svelte';
 import Gutter from '$lib/components/Gutter.svelte';
 import Header from '$lib/components/Header.svelte';
 import HelpPanel from '$lib/components/HelpPanel.svelte';
 import HistoryPanel from '$lib/components/HistoryPanel.svelte';
+import HowItWorksPanel from '$lib/components/HowItWorksPanel.svelte';
 import Inspector from '$lib/components/Inspector.svelte';
 import Notepad from '$lib/components/Notepad.svelte';
 import SettingsPanel from '$lib/components/SettingsPanel.svelte';
@@ -209,12 +212,25 @@ function persistLayout() {
 		</section>
 	</main>
 
+	<Footer {c} />
+
 	{#if c.showSheets || c.showHelp || c.showHistory || c.showTemplates}
 		<button class="backdrop" aria-label="close" onclick={() => c.closeOverlays()}></button>
 	{/if}
 
 	{#if c.showHelp}
-		<HelpPanel oninsert={insertSnippet} onclose={() => (c.showHelp = false)} />
+		<HelpPanel
+			oninsert={insertSnippet}
+			onguide={() => c.openGuide()}
+			onhowitworks={() => c.openHowItWorks()}
+			onclose={() => (c.showHelp = false)}
+		/>
+	{/if}
+	{#if c.showGuide}
+		<GuidePanel onclose={() => (c.showGuide = false)} />
+	{/if}
+	{#if c.showHowItWorks}
+		<HowItWorksPanel onclose={() => (c.showHowItWorks = false)} />
 	{/if}
 	{#if c.showTemplates}
 		<TemplatesPanel {c} />

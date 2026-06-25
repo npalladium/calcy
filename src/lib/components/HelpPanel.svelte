@@ -3,7 +3,17 @@
 // so users learn the syntax by dropping working lines into their sheet. The
 // examples live in $lib/cheatsheet so a doctest can prove they all evaluate.
 import { CHEAT_SHEET } from '$lib/cheatsheet';
-let { oninsert, onclose }: { oninsert: (snippet: string) => void; onclose: () => void } = $props();
+let {
+	oninsert,
+	onguide,
+	onhowitworks,
+	onclose
+}: {
+	oninsert: (snippet: string) => void;
+	onguide: () => void;
+	onhowitworks: () => void;
+	onclose: () => void;
+} = $props();
 
 const GROUPS = CHEAT_SHEET;
 </script>
@@ -41,6 +51,11 @@ const GROUPS = CHEAT_SHEET;
 		A range shows the most likely value and the <em>likely range</em> (5th–95th percentile, i.e. 90%
 		confidence). All computation is local — no network.
 	</p>
+	<nav class="docs" aria-label="documentation">
+		<button class="doclink" onclick={onguide}>Read the Guide</button>
+		<span aria-hidden="true">·</span>
+		<button class="doclink" onclick={onhowitworks}>How it works</button>
+	</nav>
 </aside>
 
 <style>
@@ -150,5 +165,25 @@ const GROUPS = CHEAT_SHEET;
 		margin: 0.8rem 0 0;
 		color: var(--text-faint);
 		font-size: 0.72rem;
+	}
+	.docs {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.6rem;
+		color: var(--text-faint);
+		font-size: 0.74rem;
+	}
+	.doclink {
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		color: var(--accent-soft);
+		font-size: inherit;
+	}
+	.doclink:hover {
+		color: var(--color-brand);
+		text-decoration: underline;
 	}
 </style>

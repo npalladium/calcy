@@ -90,6 +90,9 @@ export class SheetController {
 	showHelp = $state(false);
 	showHistory = $state(false);
 	showTemplates = $state(false);
+	// Long-form docs, shown as full-screen reader overlays.
+	showGuide = $state(false);
+	showHowItWorks = $state(false);
 	sheetsList = $state<SheetListItem[]>([]);
 	revisions = $state<RevisionItem[]>([]);
 	searchQuery = $state('');
@@ -570,6 +573,17 @@ export class SheetController {
 		this.showTemplates = !this.showTemplates;
 	}
 
+	// Docs are mutually exclusive with each other (one reader at a time).
+	openGuide() {
+		this.showHowItWorks = false;
+		this.showGuide = true;
+	}
+
+	openHowItWorks() {
+		this.showGuide = false;
+		this.showHowItWorks = true;
+	}
+
 	async toggleSheets() {
 		this.showSheets = !this.showSheets;
 		if (this.showSheets) await this.refreshSheets();
@@ -581,5 +595,7 @@ export class SheetController {
 		this.showSettings = false;
 		this.showHistory = false;
 		this.showTemplates = false;
+		this.showGuide = false;
+		this.showHowItWorks = false;
 	}
 }
