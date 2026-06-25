@@ -26,7 +26,7 @@ exports[`golden corpus > custom units 1`] = `
 exports[`golden corpus > errors are reported, not thrown 1`] = `
 [
   "! incompatible dimensions: m + s",
-  "∞ 1/m",
+  "! result is infinite",
   "1.41 m^0.5",
 ]
 `;
@@ -42,10 +42,10 @@ exports[`golden corpus > named distributions 1`] = `
 
 exports[`golden corpus > plain english 1`] = `
 [
-  "247629 (173600 … 349546) s",
-  "246274 (172853 … 346910) s",
-  "243002 (170179 … 342907) s",
-  "429575 (389398 … 477360) s",
+  "2.87 (2.01 … 4.05) days",
+  "2.85 (2 … 4.02) days",
+  "2.81 (1.97 … 3.97) day",
+  "4.97 (4.51 … 5.52) days",
 ]
 `;
 
@@ -58,24 +58,24 @@ exports[`golden corpus > progressive bracket 1`] = `
 
 exports[`golden corpus > roll-up and deadline odds 1`] = `
 [
-  "a = 247629 (173600 … 349546) s",
-  "b = 675822 (432167 … 1.04e6) s",
-  "total = 925642 (669713 … 1.31e6) s",
+  "a = 2.87 (2.01 … 4.05) day",
+  "b = 7.82 (5 … 12.1) day",
+  "total = 10.7 (7.75 … 15.1) day",
   "1",
 ]
 `;
 
 exports[`golden corpus > three-point estimates 1`] = `
 [
-  "304751 (197260 … 488262) s",
-  "350178 (220219 … 589259) s",
+  "3.53 (2.28 … 5.65) day",
+  "4.05 (2.55 … 6.82) day",
 ]
 `;
 
 exports[`golden corpus > units and conversion 1`] = `
 [
-  "9828 m",
-  "16.7 m/s",
+  "9.83 km",
+  "60 km/h",
   "1200 MB",
   "25 m/s",
 ]

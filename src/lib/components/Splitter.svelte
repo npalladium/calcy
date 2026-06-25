@@ -123,9 +123,10 @@ function chevronClick(e: MouseEvent, fn?: () => void) {
 		background: transparent;
 		position: relative;
 		touch-action: none;
-		/* Wider hit target than visual line; the centre 1px gets the
-		   visible border, the rest is invisible padding for the cursor. */
-		width: 6px;
+		/* Wider hit target than visual line; the centre 1px gets the visible
+		   border, the rest is invisible padding for the cursor. Kept generous so
+		   the resize handle and its chevrons are easy to land on with a mouse. */
+		width: 14px;
 		flex-shrink: 0;
 	}
 	.splitter::before {
@@ -192,6 +193,15 @@ function chevronClick(e: MouseEvent, fn?: () => void) {
 		left: 50%;
 		top: calc(50% + 16px);
 		transform: translate(-50%, -50%);
+	}
+	/* Discoverable at rest: show both chevrons faintly so it's obvious the
+	   columns can be collapsed, then brighten on hover/focus. Suppressed while a
+	   neighbour is collapsed (.any-collapsed) so the resting chevrons can't sit
+	   over — and swallow clicks meant for — an adjacent splitter's re-expand
+	   chevron; only the explicit `.visible` ones show in that state. */
+	.splitter:not(.any-collapsed) .chevron {
+		opacity: 0.4;
+		pointer-events: auto;
 	}
 	.splitter:hover .chevron,
 	.splitter:focus-within .chevron,

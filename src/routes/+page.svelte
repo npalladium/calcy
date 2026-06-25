@@ -292,7 +292,9 @@ function persistLayout() {
 	.backdrop {
 		position: fixed;
 		inset: 0;
-		background: transparent;
+		/* A dim scrim so a floating panel reads as an overlay above the sheet
+		   rather than data randomly covering the results grid. */
+		background: var(--scrim);
 		border: none;
 		padding: 0;
 		margin: 0;
@@ -319,11 +321,22 @@ function persistLayout() {
 	}
 
 	@media (max-width: 820px) {
-		/* On narrow viewports, hide the gutter and both splitters — the
-		   editor and inspector share the row, with the inspector on the right. */
+		/* On narrow viewports, drop the gutter and splitters and stack the editor
+		   above the inspector so each spans the full width — otherwise the results
+		   grid's columns overflow off-screen and the answers can't be read. */
 		.gutter-col,
 		.body > :global(.splitter) {
 			display: none;
+		}
+		.body {
+			flex-direction: column;
+			overflow: auto;
+		}
+		.editor,
+		.inspector-col {
+			width: auto;
+			flex: 1 1 auto;
+			min-height: 45vh;
 		}
 	}
 </style>

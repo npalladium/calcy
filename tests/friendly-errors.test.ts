@@ -34,6 +34,19 @@ describe('friendly error hints', () => {
 		expect(hintOf('chance(5 day)')).toMatch(/plain number/i);
 	});
 
+	it('reports a division by zero as an error, not a bare ∞', () => {
+		expect(rawOf('10 / 0')).toMatch(/infinite/i);
+		expect(hintOf('10 / 0')).toMatch(/divid/i);
+		// flagged as an error, so it never displays "∞"
+		expect(values('10 / 0')[0].display).toBeUndefined();
+	});
+
+	it('reports a non-real result (√ of a negative) as an error, not NaN', () => {
+		expect(rawOf('sqrt(-1)')).toMatch(/not a real number/i);
+		expect(hintOf('sqrt(-1)')).toMatch(/real number/i);
+		expect(values('sqrt(-1)')[0].display).toBeUndefined();
+	});
+
 	it('leaves an already-friendly message without a redundant hint', () => {
 		// the CI "did you mean (lo to hi) unit" message is already plain prose
 		expect(rawOf('2 to 4 GB/s')).toMatch(/did you mean .*unit/);

@@ -224,6 +224,24 @@ export class Engine {
 				const ast = parsed.expr;
 				try {
 					const { value, pinned } = evalRoot(parsed.expr, ctx);
+					// A deterministic result that came out ∞ or NaN is almost always a
+					// mistake (÷ by zero, √ of a negative). Surface it as a reported
+					// error rather than a bare "∞"/"NaN" cell. Distributions are left
+					// alone — their summary stats stay finite even with heavy tails.
+					if (value.scalar != null && !Number.isFinite(value.scalar)) {
+						const msg = Number.isNaN(value.scalar)
+							? 'result is not a real number'
+							: 'result is infinite';
+						return {
+							index,
+							kind: 'value',
+							raw,
+							name: parsed.type === 'assign' ? parsed.name : undefined,
+							comment: parsed.comment,
+							ast,
+							...toError(new Error(msg))
+						};
+					}
 					if (parsed.type === 'assign') ctx.env.set(parsed.name, value);
 					this.lineValues[index] = value;
 					ctx.above.push(value); // visible to sum(above) on later lines

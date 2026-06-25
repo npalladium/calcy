@@ -60,6 +60,7 @@ export function setScrollTop(top: number) {
 			class:err={!!l.error}
 			class:dist={l.isDist}
 			class:rate={l.isRate && !l.isDist}
+			class:blank={!l.error && l.kind !== 'value' && l.kind !== 'unitdef'}
 			class:sel={l.index === selected}
 			role="button"
 			tabindex="0"
@@ -76,7 +77,9 @@ export function setScrollTop(top: number) {
 				{#if distHist(l)}
 					<span class="spark"><Sparkline hist={distHist(l) ?? []} width={36} height={16} /></span>
 				{/if}
-				<span class="txt">
+				<!-- Results are clipped to keep each row aligned with its editor line
+				     (no wrapping), so expose the full text on hover when it overflows. -->
+				<span class="txt" title={l.kind === 'value' ? (l.display?.text ?? undefined) : undefined}>
 					{#if l.error}
 						⚠ {l.errorHint ?? l.error}
 					{:else if l.kind === 'value'}
@@ -183,15 +186,20 @@ export function setScrollTop(top: number) {
 	.row.rate {
 		color: var(--c-rate);
 	}
-	.row.sel {
+	.row.sel:not(.blank) {
 		background: var(--surface-2);
 	}
-	.row:hover {
+	.row:hover:not(.blank) {
 		background: var(--surface-1);
 	}
-	.row:focus-visible {
+	.row:focus-visible:not(.blank) {
 		outline: none;
 		background: var(--surface-2);
+	}
+	/* Comment/blank lines have no result, so don't paint a selection box for an
+	   otherwise-empty row (it reads as a stray grey rectangle). */
+	.row.blank {
+		cursor: default;
 	}
 	/* The copy button sits over the right edge of the row text. It's invisible
 	   at rest and fades in on row hover; on touch (or when `always` is set) it

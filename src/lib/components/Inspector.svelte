@@ -13,7 +13,11 @@ const selectedLine = $derived(c.selectedLine);
 
 <aside class="inspector">
 	{#if selectedLine?.error}
-		<div class="err-box" role="alert">⚠ {selectedLine.error}</div>
+		<!-- Show the plain-language hint first (matching the gutter and grid); the
+		     precise developer message stays one hover away. -->
+		<div class="err-box" role="alert" title={selectedLine.errorHint ? selectedLine.error : undefined}>
+			⚠ {selectedLine.errorHint ?? selectedLine.error}
+		</div>
 	{/if}
 	{#if selectedLine?.display && !selectedLine.error}
 		<div class="result-actions">

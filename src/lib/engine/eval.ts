@@ -35,9 +35,63 @@ import {
 	dimMul,
 	dimPow,
 	dimToString,
+	type UnitHint,
 	type Value,
 	type ValueMeta
 } from './value';
+
+// ---- Display-unit hints --------------------------------------------------
+// The magnitude is always canonical base units; a hint records the unit the
+// user typed so the result renders in it (issue #1). Hints ride along on
+// Values and compose through arithmetic, then surface as an implicit pin at the
+// line root (see evalRoot). offset/log units (°C, dB) never compose, so a hint
+// carrying one is dropped the moment it meets another unit.
+
+// Attach a hint to a freshly-built value (no-op when there's nothing to carry).
+const withHint = (v: Value, hint?: UnitHint): Value => (hint ? { ...v, unitHint: hint } : v);
+
+// Does combining dims `da` and `db` under `op` reduce a shared base dimension?
+// e.g. req/s (× day) cancels `time`. When it does, the two typed units didn't
+// concatenate into a clean compound unit, so the caller drops the hint.
+function unitsCancel(op: '*' | '/', da: Dimension, db: Dimension): boolean {
+	for (const k in da) {
+		if (!da[k]) continue;
+		const e = op === '/' ? -(db[k] ?? 0) : (db[k] ?? 0);
+		if (e !== 0 && Math.sign(da[k]) !== Math.sign(e)) return true;
+	}
+	return false;
+}
+
+// Wrap a compound denominator label so `GB / (req/s)` doesn't read as `GB/req/s`.
+const denomLabel = (l: string): string => (/[\s/]/.test(l) ? `(${l})` : l);
+
+// Combine the operands' display hints for a `*` or `/`. Returns undefined when
+// there's nothing clean to show: no hints, an affine/log unit in play, or a
+// cancelling dimension. A dimensionless operand (a plain number) contributes no
+// unit, so the other side's hint carries through unchanged (`2 * day` → day).
+function composeHint(op: '*' | '/', a: Value, b: Value): UnitHint | undefined {
+	const ha = a.unitHint;
+	const hb = b.unitHint;
+	if (ha?.offset != null || ha?.log || hb?.offset != null || hb?.log) return undefined;
+	if (!ha && !hb) return undefined;
+	// Only one side has a unit. Carrying it is valid when it stays in the
+	// numerator (`2 * day`, `day / 2`); but `1 / day` is "per day", whose clean
+	// label is the inverse — so drop it and let the base unit (`1/day`) show.
+	if (!ha) return dimIsZero(a.dim) && op === '*' ? hb : undefined;
+	if (!hb) return dimIsZero(b.dim) ? ha : undefined;
+	if (unitsCancel(op, a.dim, b.dim)) return undefined;
+	const factor = op === '*' ? ha.factor * hb.factor : ha.factor / hb.factor;
+	const label = op === '*' ? `${ha.label} ${hb.label}` : `${ha.label}/${denomLabel(hb.label)}`;
+	return { label, factor };
+}
+
+// Common hint across a set of summed/listed values: keep it only when every
+// contributor agrees on the same unit label (mixed units → fall back to base).
+function sharedHint(vals: Value[]): UnitHint | undefined {
+	const first = vals[0]?.unitHint;
+	if (!first) return undefined;
+	return vals.every((v) => v.unitHint?.label === first.label) ? first : undefined;
+}
 
 export interface EvalCtx {
 	env: Map<string, Value>;
@@ -630,7 +684,10 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 				if (!dimEq(hi.dim, x.dim)) throw new Error('clamp: hi must share units with x');
 				hiS = scalarParam(hi, 'hi');
 			}
-			return unaryMap(x, (v) => Math.min(hiS, Math.max(loS, v)), x.dim);
+			return withHint(
+				unaryMap(x, (v) => Math.min(hiS, Math.max(loS, v)), x.dim),
+				x.unitHint
+			);
 		}
 		// sum(above) folds every preceding result line; sum(a, b, …) folds an
 		// explicit list. `above` reuses the stored sample arrays, so correlated
@@ -644,7 +701,10 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 			// Single-list form: sum([1, 2, 3]) → 6.
 			if (vals.length === 1 && vals[0].list) {
 				const l = vals[0].list;
-				return { dim: vals[0].dim, scalar: l.reduce((a, b) => a + b, 0) };
+				return withHint(
+					{ dim: vals[0].dim, scalar: l.reduce((a, b) => a + b, 0) },
+					vals[0].unitHint
+				);
 			}
 			if (vals.length === 0) return { dim: {}, scalar: 0 };
 			const dim = vals[0].dim;
@@ -653,7 +713,10 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 					throw new Error(
 						`sum: incompatible dimensions (${dimToString(dim) || 'number'} vs ${dimToString(v.dim) || 'number'})`
 					);
-			return vals.reduce((acc, v) => binop(acc, v, (x, y) => x + y, dim, ctx.fns.N));
+			return withHint(
+				vals.reduce((acc, v) => binop(acc, v, (x, y) => x + y, dim, ctx.fns.N)),
+				sharedHint(vals)
+			);
 		}
 		// chance(predicate): fraction of samples for which a comparison holds, e.g.
 		// chance(total < 30 day). The predicate evaluates to a dimensionless 0/1
@@ -669,25 +732,32 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 			const d = ev(0);
 			if (d.list) {
 				if (d.list.length === 0) throw new Error('mean of an empty list');
-				return { dim: d.dim, scalar: reduceMean(Float64Array.from(d.list)) };
+				return withHint({ dim: d.dim, scalar: reduceMean(Float64Array.from(d.list)) }, d.unitHint);
 			}
 			// Scalar: trivially itself.
-			if (d.scalar != null) return { dim: d.dim, scalar: d.scalar };
+			if (d.scalar != null) return withHint({ dim: d.dim, scalar: d.scalar }, d.unitHint);
 			// Closed-form mean when the distribution has a parametric identity.
 			const am = analyticalMean(d);
-			if (am != null && Number.isFinite(am)) return { dim: d.dim, scalar: am };
-			return { dim: d.dim, scalar: reduceMean(d.samples as Float64Array) };
+			if (am != null && Number.isFinite(am))
+				return withHint({ dim: d.dim, scalar: am }, d.unitHint);
+			return withHint({ dim: d.dim, scalar: reduceMean(d.samples as Float64Array) }, d.unitHint);
 		}
 		case 'median': {
 			const d = ev(0);
 			if (d.list) throw new Error('median() is for distributions — use mean() for a list');
-			return { dim: d.dim, scalar: d.scalar ?? reducePercentile(d.samples as Float64Array, 0.5) };
+			return withHint(
+				{ dim: d.dim, scalar: d.scalar ?? reducePercentile(d.samples as Float64Array, 0.5) },
+				d.unitHint
+			);
 		}
 		case 'sd':
 		case 'stdev': {
 			const d = ev(0);
 			if (d.list) throw new Error('sd() is for distributions — use mean() for a list');
-			return { dim: d.dim, scalar: d.scalar != null ? 0 : reduceSd(d.samples as Float64Array) };
+			return withHint(
+				{ dim: d.dim, scalar: d.scalar != null ? 0 : reduceSd(d.samples as Float64Array) },
+				d.unitHint
+			);
 		}
 		case 'p':
 		case 'percentile': {
@@ -702,21 +772,31 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 			// a parametric identity. Sample-percentile stays as the fallback
 			// for families we haven't added (beta, pert, triangular).
 			const ap = analyticalPercentile(d, qq);
-			if (ap != null && Number.isFinite(ap)) return { dim: d.dim, scalar: ap };
-			return {
-				dim: d.dim,
-				scalar: reducePercentile(d.samples as Float64Array, qq)
-			};
+			if (ap != null && Number.isFinite(ap))
+				return withHint({ dim: d.dim, scalar: ap }, d.unitHint);
+			return withHint(
+				{
+					dim: d.dim,
+					scalar: reducePercentile(d.samples as Float64Array, qq)
+				},
+				d.unitHint
+			);
 		}
 		case 'min': {
 			const d = ev(0);
-			if (d.list) return { dim: d.dim, scalar: foldMin(d.list) };
-			return { dim: d.dim, scalar: d.scalar ?? foldMin(d.samples as Float64Array) };
+			if (d.list) return withHint({ dim: d.dim, scalar: foldMin(d.list) }, d.unitHint);
+			return withHint(
+				{ dim: d.dim, scalar: d.scalar ?? foldMin(d.samples as Float64Array) },
+				d.unitHint
+			);
 		}
 		case 'max': {
 			const d = ev(0);
-			if (d.list) return { dim: d.dim, scalar: foldMax(d.list) };
-			return { dim: d.dim, scalar: d.scalar ?? foldMax(d.samples as Float64Array) };
+			if (d.list) return withHint({ dim: d.dim, scalar: foldMax(d.list) }, d.unitHint);
+			return withHint(
+				{ dim: d.dim, scalar: d.scalar ?? foldMax(d.samples as Float64Array) },
+				d.unitHint
+			);
 		}
 		// elementwise math
 		case 'sqrt': {
@@ -725,7 +805,7 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 		}
 		case 'abs': {
 			const x = ev(0);
-			return unaryMap(x, Math.abs, x.dim);
+			return withHint(unaryMap(x, Math.abs, x.dim), x.unitHint);
 		}
 		// trigonometry: the argument is a dimensionless angle in radians (an angle
 		// unit like `deg` is dimensionless, so `sin(90 deg)` works). Inverse
@@ -800,10 +880,13 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 				level = scalarParam(lvl, 'ci level');
 			}
 			const fns: DistFns = { ...ctx.fns, level };
-			return {
-				dim: lo.dim,
-				samples: ciSamples(scalarParam(lo, 'lo'), scalarParam(hi, 'hi'), fns)
-			};
+			return withHint(
+				{
+					dim: lo.dim,
+					samples: ciSamples(scalarParam(lo, 'lo'), scalarParam(hi, 'hi'), fns)
+				},
+				lo.unitHint ?? hi.unitHint
+			);
 		}
 		// update(prior, k, n): Bayesian conjugate update — currently Beta–Binomial.
 		// If `prior` was constructed by `beta(a, b)` (carrying `meta`), the result
@@ -853,7 +936,11 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 				if (u.offset != null)
 					return { dim: u.dim, scalar: u.scale, affine: { scale: u.scale, offset: u.offset } };
 				if (u.diff) return { dim: u.dim, scalar: u.scale, temp: 'diff' };
-				return { dim: u.dim, scalar: u.scale };
+				// Carry the typed unit as a display hint, but only for dimensioned
+				// units — dimensionless multipliers (`thousand`, `deg`, `%`) have no
+				// unit to show and would otherwise mis-scale a compound label.
+				const base: Value = { dim: u.dim, scalar: u.scale };
+				return dimIsZero(u.dim) ? base : withHint(base, { label: node.name, factor: u.scale });
 			}
 			if (node.name === 'Infinity') return { dim: {}, scalar: Number.POSITIVE_INFINITY }; // open-ended bracket bound
 			if (node.name === 'above')
@@ -864,7 +951,10 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 			return evalCall(node, ctx);
 		case 'neg': {
 			const v = evalNode(node.operand, ctx);
-			return unaryMap(v, (x) => -x, v.dim);
+			return withHint(
+				unaryMap(v, (x) => -x, v.dim),
+				v.unitHint
+			);
 		}
 		case 'ci': {
 			const lo = evalNode(node.lo, ctx);
@@ -879,6 +969,7 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 						: 'confidence interval bounds have different units'
 				);
 			}
+			const ciHint = lo.unitHint ?? hi.unitHint;
 			const loV = scalarParam(lo, 'lo');
 			const hiV = scalarParam(hi, 'hi');
 			// A reversed explicit interval (`5 km to mi` → 5000 m vs 1609 m) is
@@ -901,12 +992,15 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 					const sigma = (Math.log(hiV) - Math.log(loV)) / (zHi - zLo);
 					const mu = Math.log(loV) - sigma * zLo;
 					for (let i = 0; i < out.length; i++) out[i] = Math.exp(mu + sigma * ctx.fns.gaussian());
-					return { dim: lo.dim, samples: out, meta: { kind: 'lognormal', mu, sigma } };
+					return withHint(
+						{ dim: lo.dim, samples: out, meta: { kind: 'lognormal', mu, sigma } },
+						ciHint
+					);
 				}
 				const sd = (hiV - loV) / (zHi - zLo);
 				const mean = loV - sd * zLo;
 				for (let i = 0; i < out.length; i++) out[i] = mean + sd * ctx.fns.gaussian();
-				return { dim: lo.dim, samples: out, meta: { kind: 'normal', mean, sd } };
+				return withHint({ dim: lo.dim, samples: out, meta: { kind: 'normal', mean, sd } }, ciHint);
 			}
 			// Stamp meta when the bounds are both positive → lognormal; else
 			// normal. The samples are still drawn for display (sparkline, p5/p95);
@@ -924,11 +1018,14 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 							mean: (loV + hiV) / 2,
 							sd: (hiV - loV) / (2 * z)
 						};
-			return {
-				dim: lo.dim,
-				samples: ciSamples(loV, hiV, ctx.fns),
-				meta
-			};
+			return withHint(
+				{
+					dim: lo.dim,
+					samples: ciSamples(loV, hiV, ctx.fns),
+					meta
+				},
+				ciHint
+			);
 		}
 		case 'list': {
 			// A list literal: an ordered sequence of like-dimensioned scalar
@@ -1004,14 +1101,23 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 		case 'convert': {
 			const inner = evalNode(node.expr, ctx);
 			const unit = evalNode(node.unit, ctx);
+			// A nested conversion also re-pins the display unit, so `(… in mi)` reads
+			// in miles even when it's a sub-expression. (The line root handles a
+			// top-level conversion separately, in evalRoot.)
+			const hint: UnitHint = {
+				label: node.unitText,
+				factor: scalarParam(unit, 'target unit'),
+				offset: inner.temp === 'diff' ? undefined : unit.affine?.offset,
+				log: unit.log
+			};
 			// `via bridge`: cross a dimension gap (the result takes the target dim).
-			if (node.via) return applyBridge(inner, node.via, ctx, unit.dim);
+			if (node.via) return withHint(applyBridge(inner, node.via, ctx, unit.dim), hint);
 			// otherwise a numeric identity (base is invariant); validate dims.
 			if (!dimEq(inner.dim, unit.dim))
 				throw new Error(
 					`cannot convert ${dimToString(inner.dim) || 'number'} to ${dimToString(unit.dim) || 'number'}`
 				);
-			return inner;
+			return withHint(inner, hint);
 		}
 		case 'bin': {
 			const n = ctx.fns.N;
@@ -1024,6 +1130,17 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 			}
 			const a = evalNode(node.left, ctx);
 			const b = evalNode(node.right, ctx);
+
+			// Display-unit hint for ordinary arithmetic: +/- keep a shared unit
+			// (left wins on a tie, e.g. `5 km + 3 mi` → km); */÷ compose the typed
+			// units unless a dimension cancels. Comparisons and the affine/log/temp
+			// paths below carry no hint.
+			const arithHint =
+				node.op === '+' || node.op === '-'
+					? (a.unitHint ?? b.unitHint)
+					: node.op === '*' || node.op === '/'
+						? composeHint(node.op, a, b)
+						: undefined;
 
 			// Affine magnitude: `20 °C` is `20 * °C`, but an offset unit isn't
 			// multiplicative — apply `magnitude·scale + offset` to land an absolute
@@ -1067,19 +1184,34 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 					// correlation-by-reuse (x + x ≡ 2x, sensitivity detects
 					// a's effect on a*b, etc.). The meta rides alongside so
 					// analytical reads (mean, p) stay exact regardless.
-					return sampleFromMeta(cf as Value & { meta: ValueMeta }, ctx, node.op, a, b);
+					return withHint(
+						sampleFromMeta(cf as Value & { meta: ValueMeta }, ctx, node.op, a, b),
+						arithHint
+					);
 				}
 			}
 
 			switch (node.op) {
 				case '+':
-					return binop(a, b, (x, y) => x + y, a.dim, n);
+					return withHint(
+						binop(a, b, (x, y) => x + y, a.dim, n),
+						arithHint
+					);
 				case '-':
-					return binop(a, b, (x, y) => x - y, a.dim, n);
+					return withHint(
+						binop(a, b, (x, y) => x - y, a.dim, n),
+						arithHint
+					);
 				case '*':
-					return binop(a, b, (x, y) => x * y, dimMul(a.dim, b.dim), n);
+					return withHint(
+						binop(a, b, (x, y) => x * y, dimMul(a.dim, b.dim), n),
+						arithHint
+					);
 				case '/':
-					return binop(a, b, (x, y) => x / y, dimDiv(a.dim, b.dim), n);
+					return withHint(
+						binop(a, b, (x, y) => x / y, dimDiv(a.dim, b.dim), n),
+						arithHint
+					);
 				case '<':
 				case '>':
 				case '<=':
@@ -1124,5 +1256,9 @@ export function evalRoot(node: Node, ctx: EvalCtx): { value: Value; pinned?: Pin
 		// Log target (dB/dBm/dBW): display undoes the log instead of a linear scale.
 		return { value, pinned: { label: node.unitText, factor, offset, log: unit.log } };
 	}
-	return { value: evalNode(node, ctx) };
+	// No explicit `in/to`: fall back to the unit the user typed, carried as a hint
+	// through the expression. Absent a hint (e.g. `sum` over mixed units), the
+	// formatter shows the canonical base unit, exactly as before.
+	const value = evalNode(node, ctx);
+	return { value, pinned: value.unitHint };
 }

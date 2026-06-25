@@ -98,8 +98,12 @@ let {
 		font-size: 0.75rem;
 		font-family: var(--font-mono);
 		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+		/* Wrap the blurb (clamped to two lines) instead of hard-truncating, so
+		   example descriptions stay readable in the panel's vertical space. */
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
 	}
 	.when {
 		color: var(--text-faint);

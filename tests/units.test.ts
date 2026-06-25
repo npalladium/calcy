@@ -27,7 +27,8 @@ describe('exact conversions', () => {
 describe('labels survive arithmetic', () => {
 	it('counts keep their name', () => {
 		expect(text('5 req')).toBe('5 req');
-		expect(text('100 events')).toBe('100 event');
+		// the display echoes the unit as typed (issue #1), so the plural survives
+		expect(text('100 events')).toBe('100 events');
 		expect(num('1 req in req')).toBe(1);
 	});
 	it('currency is its own dimension', () => {

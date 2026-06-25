@@ -15,6 +15,12 @@ const NUMBER_FORMATS: { value: NumberFormat; label: string; hint: string }[] = [
 
 let importInput = $state<HTMLInputElement>();
 
+// The calendar conventions are precise fractions (a Gregorian month is
+// 365.2425/12 = 30.436875 days), which read as noise in the input. Trim the
+// *display* to a few decimals; the stored value keeps full precision until the
+// user actually edits it.
+const trim = (n: number) => +n.toFixed(4);
+
 function onImport(e: Event) {
 	const file = (e.target as HTMLInputElement).files?.[0];
 	if (file) c.importDb(file);
@@ -22,8 +28,8 @@ function onImport(e: Event) {
 </script>
 
 <section class="panel settings" aria-label="settings">
-	<label>month = <input type="number" step="any" bind:value={c.monthDays} onchange={() => c.persistSetting('monthDays', String(c.monthDays))} /> day</label>
-	<label>year = <input type="number" step="any" bind:value={c.yearDays} onchange={() => c.persistSetting('yearDays', String(c.yearDays))} /> day</label>
+	<label>month = <input type="number" step="any" value={trim(c.monthDays)} onchange={(e) => { c.monthDays = +e.currentTarget.value; c.persistSetting('monthDays', String(c.monthDays)); }} /> day</label>
+	<label>year = <input type="number" step="any" value={trim(c.yearDays)} onchange={(e) => { c.yearDays = +e.currentTarget.value; c.persistSetting('yearDays', String(c.yearDays)); }} /> day</label>
 	<label>samples N = <input type="number" step="1000" bind:value={c.samples} onchange={() => c.persistSetting('samples', String(c.samples))} /></label>
 	<div class="fmt" role="group" aria-label="number format">
 		<span class="fmt-label">numbers</span>

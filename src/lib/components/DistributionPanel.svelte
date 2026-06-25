@@ -29,12 +29,21 @@ const cell = (n: number) => `${formatNumber(n, fmt)}${unit ? ` ${unit}` : ''}`;
 
 {#if dist}
 	<div class="dist">
-		<p class="plain">
-			Most likely <strong>{line.display?.p50}{unit ? ` ${unit}` : ''}</strong> — usually between
-			<strong>{line.display?.p5}</strong> and <strong>{line.display?.p95}</strong>{unit
-				? ` ${unit}`
-				: ''}.
-		</p>
+		{#if line.display?.kind === 'dist'}
+			<p class="plain">
+				Most likely <strong>{line.display?.p50}{unit ? ` ${unit}` : ''}</strong>—usually between
+				<strong>{line.display?.p5}</strong> and <strong>{line.display?.p95}</strong>{unit
+					? ` ${unit}`
+					: ''}.
+			</p>
+		{:else}
+			<!-- A distribution that collapsed to a single value (e.g. x − x): no
+			     spread, so there's no "usually between" range to show. `text` already
+			     carries the unit. -->
+			<p class="plain">
+				Always <strong>{line.display?.text}</strong>—no variation.
+			</p>
+		{/if}
 		<Sparkline hist={dist.hist} width={280} height={64} />
 		<details>
 			<summary>All statistics</summary>

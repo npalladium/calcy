@@ -53,6 +53,23 @@ export interface Value {
 	// convert without the offset. Only set on pure-temperature values; plain `K`
 	// is untagged and behaves exactly as before.
 	temp?: 'abs' | 'diff';
+	// Preferred *display* unit, carried from the unit the user typed (`day`,
+	// `km/h`, `GB/s`). The magnitude itself stays in canonical base units — this
+	// only chooses how the result is rendered, exactly as an explicit `in <unit>`
+	// would. Propagated through arithmetic by the evaluator and surfaced as the
+	// pinned unit at the line root when no `in/to` is present. Dropped whenever a
+	// dimension cancels (rate × time → count), since then there is no clean typed
+	// unit to show. See [unitsCancel] / [composeHint] in eval.ts.
+	unitHint?: UnitHint;
+}
+
+// A display-unit choice: how to render a base-unit magnitude. Structurally the
+// same as eval's PinnedUnit (an inferred hint becomes an implicit pin).
+export interface UnitHint {
+	label: string;
+	factor: number; // base-per-1-of-unit
+	offset?: number; // affine units: displayed = (base − offset) / factor
+	log?: { ref: number; factor: number }; // log units: displayed = factor · log10(base / ref)
 }
 
 export const dimZero = (): Dimension => ({});
