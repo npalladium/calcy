@@ -4,17 +4,37 @@ range and calcy carries that "give or take" all the way through to the result.
 
 ### Start typing
 
-Each line is its own little calculation. Units are part of the maths, so calcy
-keeps you honest:
+Each line is its own little calculation:
 
 ```
-5 km + 3 mi          → 9.83 km
-12 V / 4 ohm         → 3 A
-1 kWh / 60 W         → 16.7 hour
+$20 + $5             → $25.00
+10% of 250           → 25
+2 GB / 500 MB        → 4
 ```
 
-If you mix things that don't belong together — like `10 m + 5 s` — calcy tells
-you, instead of quietly handing back a wrong answer.
+Units are part of the maths, so calcy keeps you honest: mix things that don't
+belong together — like `10 m + 5 s` — and it tells you, instead of quietly
+handing back a wrong answer.
+
+### "Convert" vs "range": `in` and `to`
+
+Two small words, kept separate so calcy always knows which you mean:
+
+- `in` **converts** units — `5 km in mi` → 3.11 mi, and it tidies a mixed-unit
+  sum into one unit — `5 km + 3 mi in km` → 9.83 km
+- `to` builds a **range** — `5 to 10 kg` means "somewhere between 5 and 10"
+
+If you write `5 km to mi` hoping to convert, calcy spots it and points you to `in`.
+
+### Give things names
+
+```
+goal = 50k $         # k means thousand (M means million)
+monthly = goal / 12  # reuse names you defined earlier
+```
+
+Anything after `#` is just a note to yourself, and a name you defined above can be
+reused on any line below it.
 
 ### When you're not sure of a number
 
@@ -22,48 +42,30 @@ Real life is rarely one exact figure. Type a range and calcy works out the likel
 result for you:
 
 ```
-trips = 800 to 1200 per day
-revenue = trips * $4.50
+visitors = 800 to 1200       # people you expect in a day
+revenue = visitors * $4.50   # if each spends $4.50
 ```
 
-You'll see the **most likely value** along with the range it's likely to fall in.
-There are a few friendly ways to say "roughly":
+calcy shows a **middle estimate** followed by a low-to-high range in brackets —
+the value the answer is most likely near, then the span it will probably stay
+within. The uncertainty in `visitors` flows straight through into `revenue`.
+
+A few other friendly ways to say "roughly":
 
 - `3 ± 1 day` — give or take a day
 - `about 5 kg` or `~5 kg` — roughly, give or take ~10%
-- `1000 to 1500 visitors` — somewhere in this range
-- `normal(100, 15)` — when you already know the statistics
+- `normal(100, 15)` — a bell curve around 100, give or take 15
 
-You don't need any statistics background to use these — pick whichever matches how
-you'd say it out loud.
-
-### "Convert" vs "range": `in` and `to`
-
-Two small words, kept separate so there's never any guessing:
-
-- `in` **converts** units — `5 km in mi` → 3.11 mi
-- `to` means a **range** — `5 to 10 kg` is "somewhere between 5 and 10"
-
-If you write `5 km to mi` hoping to convert, calcy spots it and points you to `in`.
-
-### Give things names
-
-```
-rate = 12k req/s       # k means ×1000, M means ×1,000,000
-daily = rate * 1 day   # reuse names you defined earlier
-```
-
-Anything after `#` is just a note to yourself. Reusing a name you defined above
-keeps the whole sheet consistent.
+Pick whichever matches how you'd say it out loud — no statistics background needed.
 
 ### Ask questions
 
-Once you've described a situation, you can interrogate it in plain terms:
+With the `visitors` and `revenue` from above, you can ask plain-language questions:
 
 ```
-chance(revenue > $5000)     # how likely is this?
-mean(trips)                 # the average
-median(trips)               # the middle value
+chance(revenue > $5000)     # how likely is a $5,000 day?
+mean(revenue)               # the average
+median(visitors)            # the middle value
 ```
 
 ### Money
@@ -76,19 +78,20 @@ $5 + 3 $     → $8.00
 ₹2500000     → ₹2,500,000.00
 ```
 
-You can even set your own exchange rate and convert across currencies:
+You can even set your own exchange rate and convert across currencies. `bridge`
+names a rate; `via` tells calcy which one to use:
 
 ```
 bridge fx = 83 ₹/$
 1000 $ in INR via fx     → ₹83,000.00
 ```
 
-### Exact answers and dependable estimates
+### Exact or estimated — you don't choose
 
 When a calculation has one exact answer, calcy gives you that. When you've
-described something uncertain, it estimates the likely outcome by exploring the
-range of possibilities. Both are real calculations — neither is a guess, and you
-never have to think about which one you're getting.
+described something uncertain, it estimates the likely outcome instead. Both are
+real calculations — neither is a guess, and you never have to pick which one you
+want.
 
 ### Finding your way around
 
@@ -96,5 +99,6 @@ never have to think about which one you're getting.
 - **?** — a cheat sheet you can click to insert (`⌘/`)
 - `⌘K` your sheets · `⌘↵` reshuffle the estimates · `Esc` close
 
-Everything runs on your own device — no account, no internet needed. Your sheets
-are saved right here, and **Share** packs one into a link you can send to anyone.
+On Windows and Linux, use `Ctrl` wherever these show `⌘`. Everything runs on your
+own device — no account, no internet needed. Your sheets are saved right here, and
+**Share** packs one into a link you can send to anyone.
