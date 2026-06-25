@@ -5,14 +5,49 @@
 		<link rel="icon" href="./favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="theme-color" content="#8100ff" />
-		<link href="./_app/immutable/entry/start.T7G9sgAs.js" rel="modulepreload">
-		<link href="./_app/immutable/chunks/DpUCSmgt.js" rel="modulepreload">
+
+		<!-- Social-graph preview + base SEO. This is a prerendered SPA (ssr=false),
+		     so the page's <svelte:head> never reaches link crawlers — these static
+		     tags are what Slack/Discord/Twitter/iMessage and search engines read.
+		     The runtime <svelte:head> in +page.svelte still overrides <title> with
+		     the active sheet name once JS runs. Image URLs must be absolute, so
+		     they're pinned to the production origin. -->
+		<title>calcy — an uncertainty-aware unit calculator</title>
+		<meta
+			name="description"
+			content="A unit-aware, uncertainty-aware notepad calculator. Every value is a distribution of a dimensioned quantity — runs entirely on your device, no account, no network."
+		/>
+		<link rel="canonical" href="https://npalladium.github.io/calcy/" />
+
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="calcy" />
+		<meta property="og:title" content="calcy — an uncertainty-aware unit calculator" />
+		<meta
+			property="og:description"
+			content="Unit-aware math, uncertainty ranges, and rate reasoning in one offline notepad. Every value is a distribution of a dimensioned quantity."
+		/>
+		<meta property="og:url" content="https://npalladium.github.io/calcy/" />
+		<meta property="og:image" content="https://npalladium.github.io/calcy/og.png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content="calcy: sample calculations showing unit math, an uncertain range, and a rate conversion." />
+
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content="calcy — an uncertainty-aware unit calculator" />
+		<meta
+			name="twitter:description"
+			content="Unit-aware math, uncertainty ranges, and rate reasoning in one offline notepad."
+		/>
+		<meta name="twitter:image" content="https://npalladium.github.io/calcy/og.png" />
+
+		<link href="./_app/immutable/entry/start.DIDwEbtY.js" rel="modulepreload">
+		<link href="./_app/immutable/chunks/D7QVEF5A.js" rel="modulepreload">
 		<link href="./_app/immutable/chunks/CUnnrov3.js" rel="modulepreload">
-		<link href="./_app/immutable/entry/app.CckiwHrh.js" rel="modulepreload">
+		<link href="./_app/immutable/entry/app.DHPrDebz.js" rel="modulepreload">
 		<link href="./_app/immutable/chunks/kNaey6uv.js" rel="modulepreload">
 		<link href="./_app/immutable/chunks/xihTtKlq.js" rel="modulepreload">
 		<link href="./_app/immutable/nodes/0.OS9V4tSd.js" rel="modulepreload">
-		<link href="./_app/immutable/nodes/2.kJVd7cCs.js" rel="modulepreload">
+		<link href="./_app/immutable/nodes/2.C1jyfHMk.js" rel="modulepreload">
 		
 		<link href="./_app/immutable/assets/0.hVGPcmCh.css" rel="stylesheet">
 		<link href="./_app/immutable/assets/2.A8DMzGBt.css" rel="stylesheet">
@@ -21,15 +56,15 @@
 		<div style="display: contents">
 			<script>
 				{
-					__sveltekit_6g63wf = {
+					__sveltekit_1jaxrlq = {
 						base: new URL(".", location).pathname.slice(0, -1)
 					};
 
 					const element = document.currentScript.parentElement;
 
 					Promise.all([
-						import("./_app/immutable/entry/start.T7G9sgAs.js"),
-						import("./_app/immutable/entry/app.CckiwHrh.js")
+						import("./_app/immutable/entry/start.DIDwEbtY.js"),
+						import("./_app/immutable/entry/app.DHPrDebz.js")
 					]).then(([kit, app]) => {
 						kit.start(app, element);
 					});
