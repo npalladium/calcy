@@ -10,13 +10,16 @@ export interface TapeRow {
 	operand: string;
 }
 
-// A blank operand evaluates as 0 so a half-typed tape never throws.
-const operand = (r: TapeRow): string => `(${r.operand.trim() || '0'})`;
+// A blank (or missing) operand evaluates as 0 so a half-typed — or empty —
+// tape never throws.
+const operand = (r?: TapeRow): string => `(${r?.operand.trim() || '0'})`;
 
 // The left-associative prefix expression up to (and including) row `upto`.
+// Tolerant of an empty `rows` and an out-of-range `upto` (returns `(0)`), so
+// callers don't have to length-check first.
 export function tapePrefix(rows: TapeRow[], upto: number): string {
 	let e = operand(rows[0]);
-	for (let k = 1; k <= upto; k++) e = `(${e} ${rows[k].op} ${operand(rows[k])})`;
+	for (let k = 1; k <= upto && k < rows.length; k++) e = `(${e} ${rows[k].op} ${operand(rows[k])})`;
 	return e;
 }
 

@@ -162,6 +162,12 @@ function persistLayout() {
 		</div>
 	{/if}
 
+	{#if c.saveError}
+		<div class="eval-error" role="alert">
+			⚠ Couldn’t save your latest changes (storage may be full). Export your sheet to be safe.
+		</div>
+	{/if}
+
 	{#if c.evalError}
 		<div class="eval-error" role="alert">⚠ {c.evalError}</div>
 	{/if}

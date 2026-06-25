@@ -29,7 +29,10 @@ function currencyKey(dim: Dimension): string | null {
 // decimals (matches $/€/£ convention; ¥ shows .00 which is conventional-
 // accounting-correct, if unusual for yen in headlines).
 function formatMoney(n: number, symbol: string): string {
-	if (!Number.isFinite(n)) return `${symbol}${n > 0 ? '∞' : '-∞'}`;
+	if (Number.isNaN(n)) return 'NaN';
+	// Sign before the symbol, matching the finite-negative convention below
+	// (`-$5.00`), so -Infinity reads `-$∞` rather than `$-∞`.
+	if (!Number.isFinite(n)) return n > 0 ? `${symbol}∞` : `-${symbol}∞`;
 	const abs = Math.abs(n);
 	const fixed = abs.toFixed(2);
 	const [whole, frac] = fixed.split('.');
@@ -69,7 +72,11 @@ function plain(n: number): string {
 // 1.04B, 31.1B, 12K — mantissa in [1, 1000) followed by a tier suffix.
 function suffixed(n: number): string {
 	const a = Math.abs(n);
-	let tier = Math.floor(Math.log10(a) / 3);
+	// Clamp the tier to the table: floating-point log10 of values just below a
+	// power-of-1000 boundary (e.g. 999999999999999 → log10 == 15 exactly) can
+	// floor to an out-of-range tier, which would index `SUFFIXES` as undefined
+	// and render "1undefined". The caller already routes a ≥ 1e15 to scientific.
+	let tier = Math.min(Math.floor(Math.log10(a) / 3), SUFFIXES.length - 1);
 	let mant = n / 10 ** (3 * tier);
 	// Rounding the mantissa can push it to 1000 (e.g. 999_999 → "1000K"); when it
 	// does, promote to the next tier so we render "1M" instead.
@@ -84,7 +91,7 @@ function suffixed(n: number): string {
 // spelled-out word. Below a thousand there is no word, so it reads as plain.
 function newspaper(n: number): string {
 	const a = Math.abs(n);
-	let tier = Math.floor(Math.log10(a) / 3);
+	let tier = Math.min(Math.floor(Math.log10(a) / 3), SCALE_WORDS.length - 1);
 	let mant = n / 10 ** (3 * tier);
 	if (Math.abs(mant) >= 999.5 && tier + 1 < SCALE_WORDS.length) {
 		tier += 1;

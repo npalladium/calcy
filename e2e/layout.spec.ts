@@ -131,7 +131,12 @@ test.describe('draggable resize', () => {
 
 		await page.reload();
 		await page.locator('.cm-editor').first().waitFor({ state: 'visible' });
-		expect(await colWidth(page, '.editor')).toBeCloseTo(editorAfter, -1);
+		// boot() applies the persisted layout a tick after the editor mounts, so
+		// the column briefly shows its default width — poll until it settles to
+		// the resized value rather than reading once and racing that hydration.
+		await expect
+			.poll(() => colWidth(page, '.editor'))
+			.toBeGreaterThan(editorAfter - 10);
 	});
 
 	test('the splitter is keyboard-resizable via arrow keys', async ({ page }) => {

@@ -17,8 +17,16 @@ export function decodeShare(s: string): SharePayload | null {
 	if (!s) return null;
 	try {
 		const o = JSON.parse(decodeURIComponent(atob(s)));
-		if (typeof o?.title === 'string' && typeof o?.body === 'string' && typeof o?.seed === 'number')
-			return { title: o.title, body: o.body, seed: o.seed };
+		if (
+			typeof o?.title === 'string' &&
+			typeof o?.body === 'string' &&
+			typeof o?.seed === 'number' &&
+			Number.isFinite(o.seed)
+		)
+			// Normalise line endings (a sheet authored on Windows or pasted from a
+			// CRLF source) and coerce the seed to an integer so the recipient's RNG
+			// draws the same sequence the sharer saw.
+			return { title: o.title, body: o.body.replace(/\r\n/g, '\n'), seed: Math.trunc(o.seed) };
 		return null;
 	} catch {
 		return null;

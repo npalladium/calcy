@@ -90,6 +90,21 @@ const scalarParam = (v: Value, what: string): number => {
 	return v.scalar;
 };
 
+// Fold-based min/max. `Math.min(...arr)` spreads every element as a call
+// argument and overflows the call stack for large arrays (the default sample
+// array is ~10k, and a list like `0..200000` is far larger), so we reduce
+// instead. NaN elements are skipped rather than poisoning the whole result.
+const foldMin = (a: ArrayLike<number>): number => {
+	let m = Infinity;
+	for (let i = 0; i < a.length; i++) if (a[i] < m) m = a[i];
+	return m;
+};
+const foldMax = (a: ArrayLike<number>): number => {
+	let m = -Infinity;
+	for (let i = 0; i < a.length; i++) if (a[i] > m) m = a[i];
+	return m;
+};
+
 // Scale a value's magnitude (scalar or whole sample array) by `k`, relabelling
 // its dimension. Used by bridge conversions.
 function scaleVal(v: Value, k: number, dim: Dimension): Value {
@@ -405,7 +420,14 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 	// flat positional list), so it bypasses the named-arg binder entirely.
 	if (name === 'bracket') return evalBracket(callArgs, ctx);
 	const args: Node[] = hasNamed ? bindNamed(name, callArgs) : callArgs.map((a) => a.value as Node);
-	const ev = (i: number) => evalNode(args[i], ctx);
+	const ev = (i: number) => {
+		// Guard the unary/reducer cases that read ev(0) without an explicit arity
+		// check (mean, min, sqrt, sin, …). Without this, a no-arg call like `mean()`
+		// dereferences `undefined.type` deep in evalNode and leaks an internal
+		// "Cannot read properties of undefined" error instead of a usable message.
+		if (args[i] === undefined) throw new Error(`${name}() needs an argument`);
+		return evalNode(args[i], ctx);
+	};
 	switch (name) {
 		case 'normal': {
 			if (args.length !== 2) throw new Error('normal(mean, sd)');
@@ -414,6 +436,7 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 			if (!dimEq(mean.dim, sd.dim)) throw new Error('normal: mean and sd must share units');
 			const meanV = scalarParam(mean, 'mean');
 			const sdV = scalarParam(sd, 'sd');
+			if (!(sdV >= 0)) throw new Error('normal: sd must be non-negative');
 			return {
 				dim: mean.dim,
 				samples: normalSamples(meanV, sdV, ctx.fns),
@@ -460,6 +483,7 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 			requireDimless(b, 'beta b');
 			const aV = scalarParam(a, 'a');
 			const bV = scalarParam(b, 'b');
+			if (!(aV > 0 && bV > 0)) throw new Error('beta(a, b): a and b must be positive');
 			return {
 				dim: {},
 				samples: betaSamples(aV, bV, ctx.fns),
@@ -686,13 +710,13 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 		}
 		case 'min': {
 			const d = ev(0);
-			if (d.list) return { dim: d.dim, scalar: Math.min(...d.list) };
-			return { dim: d.dim, scalar: d.scalar ?? Math.min(...(d.samples as Float64Array)) };
+			if (d.list) return { dim: d.dim, scalar: foldMin(d.list) };
+			return { dim: d.dim, scalar: d.scalar ?? foldMin(d.samples as Float64Array) };
 		}
 		case 'max': {
 			const d = ev(0);
-			if (d.list) return { dim: d.dim, scalar: Math.max(...d.list) };
-			return { dim: d.dim, scalar: d.scalar ?? Math.max(...(d.samples as Float64Array)) };
+			if (d.list) return { dim: d.dim, scalar: foldMax(d.list) };
+			return { dim: d.dim, scalar: d.scalar ?? foldMax(d.samples as Float64Array) };
 		}
 		// elementwise math
 		case 'sqrt': {
@@ -726,6 +750,7 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 			if (!dimEq(start.dim, end.dim)) throw new Error('cagr: start and end must share units');
 			requireDimless(periods, 'cagr periods');
 			const n = scalarParam(periods, 'periods');
+			if (!(n > 0)) throw new Error('cagr(start, end, periods): periods must be positive');
 			const ratio = binop(end, start, (x, y) => x / y, {}, ctx.fns.N);
 			return unaryMap(ratio, (r) => r ** (1 / n) - 1, {});
 		}
@@ -1042,7 +1067,7 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 					// correlation-by-reuse (x + x ≡ 2x, sensitivity detects
 					// a's effect on a*b, etc.). The meta rides alongside so
 					// analytical reads (mean, p) stay exact regardless.
-					return sampleFromMeta(cf as Value & { meta: ValueMeta }, ctx, a, b);
+					return sampleFromMeta(cf as Value & { meta: ValueMeta }, ctx, node.op, a, b);
 				}
 			}
 

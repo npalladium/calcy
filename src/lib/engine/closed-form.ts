@@ -28,54 +28,38 @@ import type { Dimension, Value, ValueMeta } from './value';
 export function sampleFromMeta(
 	v: Value & { meta: ValueMeta },
 	ctx: { fns: DistFns },
+	op: '+' | '-' | '*' | '/',
 	fromA?: Value,
 	fromB?: Value
 ): Value {
 	const N = ctx.fns.N;
 	const out = new Float64Array(N);
+	// Apply the *actual* operator elementwise. Deriving samples from the inputs
+	// (rather than re-keying off the meta family) is what preserves correlation-
+	// by-reuse — `x - x ≡ 0`, `x / x ≡ 1` — and it keeps the sample array in
+	// agreement with the analytical `meta` for every op, not just the additive /
+	// multiplicative one the family happens to be closed under.
+	const apply = (x: number, y: number): number =>
+		op === '+' ? x + y : op === '-' ? x - y : op === '*' ? x * y : x / y;
 
-	// Distribution × distribution: combine the input samples directly. The
-	// closed-form dispatcher only emits normal (additive) and lognormal
-	// (multiplicative) results, so the op is implicit in the meta kind.
+	// Distribution ⊕ distribution: combine the paired input samples directly.
 	if (fromA?.samples && fromB?.samples) {
-		if (v.meta.kind === 'lognormal') {
-			for (let i = 0; i < N; i++) out[i] = fromA.samples[i] * fromB.samples[i];
-			return { dim: v.dim, samples: out, meta: v.meta };
-		}
-		if (v.meta.kind === 'normal') {
-			for (let i = 0; i < N; i++) out[i] = fromA.samples[i] + fromB.samples[i];
-			return { dim: v.dim, samples: out, meta: v.meta };
-		}
+		for (let i = 0; i < N; i++) out[i] = apply(fromA.samples[i], fromB.samples[i]);
+		return { dim: v.dim, samples: out, meta: v.meta };
 	}
 
-	// Scalar × distribution: keep the distribution's samples, apply the
-	// scalar elementwise.
+	// Distribution ⊕ scalar: apply the scalar elementwise on the right.
 	if (fromA?.samples && fromB?.scalar != null) {
 		const k = fromB.scalar;
-		if (v.meta.kind === 'lognormal' && k > 0) {
-			for (let i = 0; i < N; i++) out[i] = fromA.samples[i] * k;
-			return { dim: v.dim, samples: out, meta: v.meta };
-		}
-		if (v.meta.kind === 'normal') {
-			for (let i = 0; i < N; i++) out[i] = fromA.samples[i] * k;
-			return { dim: v.dim, samples: out, meta: v.meta };
-		}
+		for (let i = 0; i < N; i++) out[i] = apply(fromA.samples[i], k);
+		return { dim: v.dim, samples: out, meta: v.meta };
 	}
+	// Scalar ⊕ distribution: scalar on the left (only `k * dist` reaches here —
+	// `k / dist` and `k - dist` aren't family-closed, so closedFormBinop returns
+	// null and the engine takes the sample path).
 	if (fromB?.samples && fromA?.scalar != null) {
 		const k = fromA.scalar;
-		if (v.meta.kind === 'lognormal' && k > 0) {
-			for (let i = 0; i < N; i++) out[i] = k * fromB.samples[i];
-			return { dim: v.dim, samples: out, meta: v.meta };
-		}
-		if (v.meta.kind === 'normal') {
-			for (let i = 0; i < N; i++) out[i] = k * fromB.samples[i];
-			return { dim: v.dim, samples: out, meta: v.meta };
-		}
-	}
-
-	// Scalar +/− distribution: shift the samples by the scalar.
-	if (fromA?.samples && fromB?.scalar != null && v.meta.kind === 'normal') {
-		for (let i = 0; i < N; i++) out[i] = fromA.samples[i] + fromB.scalar;
+		for (let i = 0; i < N; i++) out[i] = apply(k, fromB.samples[i]);
 		return { dim: v.dim, samples: out, meta: v.meta };
 	}
 

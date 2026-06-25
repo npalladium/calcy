@@ -7,8 +7,11 @@ import type { LineResult } from '$lib/engine';
 // value, `⚠ error` for a failure. Lines without a result pass through verbatim.
 export function annotatedBody(body: string, results: LineResult[]): string {
 	const byIndex = new Map(results.map((l) => [l.index, l]));
+	// Split on either line ending so a CRLF body (shared/imported/pasted from a
+	// Windows source) doesn't leave a stray `\r` sitting before the `→` marker;
+	// re-joining with `\n` normalises the output.
 	return body
-		.split('\n')
+		.split(/\r?\n/)
 		.map((raw, i) => {
 			const l = byIndex.get(i);
 			if (l?.error) return `${raw}  ⚠ ${l.error}`;

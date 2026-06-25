@@ -33,9 +33,19 @@ const NUMBER_FORMATS: readonly string[] = ['auto', 'compact', 'newspaper', 'scie
 // `debugAst`, which is always resolved to a boolean.
 export function parseSettings(raw: Record<string, string>): ParsedSettings {
 	const out: ParsedSettings = { debugAst: raw.debugAst === 'true' };
-	if (raw.monthDays) out.monthDays = Number(raw.monthDays);
-	if (raw.yearDays) out.yearDays = Number(raw.yearDays);
-	if (raw.samples) out.samples = Number(raw.samples);
+	// A corrupted / hand-edited / truncated value must not poison evaluation: a
+	// non-finite or non-positive day-count or sample-count would flow straight
+	// into the engine (NaN samples break every line), so reject it here and let
+	// the caller keep its default instead of assigning NaN.
+	const positive = (s: string | undefined): number | undefined => {
+		if (!s) return undefined;
+		const n = Number(s);
+		return Number.isFinite(n) && n > 0 ? n : undefined;
+	};
+	out.monthDays = positive(raw.monthDays);
+	out.yearDays = positive(raw.yearDays);
+	const samples = positive(raw.samples);
+	if (samples !== undefined) out.samples = Math.floor(samples);
 	if (NUMBER_FORMATS.includes(raw.numberFormat))
 		out.numberFormat = raw.numberFormat as NumberFormat;
 	if (raw.mode === 'tape' || raw.mode === 'notepad') out.mode = raw.mode;

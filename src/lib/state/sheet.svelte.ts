@@ -110,9 +110,17 @@ export class SheetController {
 	// true when this tab fell back to an in-memory DB (calcy is open in another
 	// tab that owns the on-disk database) — surfaced so edits aren't lost.
 	ephemeral = $state(false);
+	// true when the most recent autosave write rejected (e.g. OPFS quota/disk
+	// full). Surfaced so the user knows their edits aren't reaching disk instead
+	// of typing on into a silent void.
+	saveError = $state(false);
 
 	engine = $state<EngineClient>();
 	private db: DbClient | undefined;
+	// Gates the autosave effect until boot() has loaded persisted state, so a
+	// slow boot can't fire a debounced save of the constructor defaults (the
+	// SAMPLE body under a throwaway id) before the real sheet is adopted.
+	private booted = false;
 
 	private evalTimer: ReturnType<typeof setTimeout> | undefined;
 	private saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -141,11 +149,9 @@ export class SheetController {
 			void this.body;
 			void this.title;
 			void this.seed;
-			if (!this.db) return;
+			if (!this.db || !this.booted) return;
 			clearTimeout(this.saveTimer);
-			this.saveTimer = setTimeout(() => {
-				this.db?.save({ id: this.sheetId, title: this.title, body: this.body, seed: this.seed });
-			}, 700);
+			this.saveTimer = setTimeout(() => this.persistSheet(), 700);
 		});
 		// Reset the pin input when the cursor moves to another line.
 		$effect(() => {
@@ -191,6 +197,8 @@ export class SheetController {
 			const last = await this.db.loadLast();
 			if (last) this.adopt(last);
 		}
+		// Persisted state is now loaded; arm autosave for subsequent user edits.
+		this.booted = true;
 		await this.refreshSheets();
 		this.runEval();
 	}
@@ -205,6 +213,41 @@ export class SheetController {
 		this.title = row.title;
 		this.body = row.body;
 		this.seed = row.seed;
+	}
+
+	// Persist the current sheet, tracking write failures. Used by the debounced
+	// autosave; failures flip `saveError` so the view can warn the user.
+	private persistSheet() {
+		if (!this.db) return;
+		this.db
+			.save({ id: this.sheetId, title: this.title, body: this.body, seed: this.seed })
+			.then(() => {
+				this.saveError = false;
+			})
+			.catch(() => {
+				this.saveError = true;
+			});
+	}
+
+	// Force any pending debounced autosave to commit *now* and await it. Called
+	// before switching sheet identity (new/open/template) so the current sheet's
+	// last sub-debounce edits land in its row rather than surviving only as a
+	// revision snapshot the user has to dig out of history.
+	private async flushSave() {
+		if (!this.db) return;
+		clearTimeout(this.saveTimer);
+		this.saveTimer = undefined;
+		try {
+			await this.db.save({
+				id: this.sheetId,
+				title: this.title,
+				body: this.body,
+				seed: this.seed
+			});
+			this.saveError = false;
+		} catch {
+			this.saveError = true;
+		}
 	}
 
 	async runEval() {
@@ -249,6 +292,7 @@ export class SheetController {
 
 	async newSheet() {
 		if (!this.db) return;
+		await this.flushSave(); // commit pending edits to the current sheet first
 		await this.db.snapshot(this.sheetId, this.body); // snapshot before leaving
 		this.sheetId = crypto.randomUUID();
 		this.title = 'Untitled';
@@ -264,6 +308,7 @@ export class SheetController {
 			this.showSheets = false;
 			return;
 		}
+		await this.flushSave(); // commit pending edits to the current sheet first
 		await this.db.snapshot(this.sheetId, this.body);
 		const data = await this.db.loadSheet(id);
 		if (data) this.adopt(data);
@@ -338,6 +383,7 @@ export class SheetController {
 			this.loadTemplate(t);
 			return;
 		}
+		await this.flushSave(); // commit pending edits to the current sheet first
 		await this.db.snapshot(this.sheetId, this.body);
 		this.sheetId = crypto.randomUUID();
 		this.title = t.title;
@@ -368,7 +414,9 @@ export class SheetController {
 			return;
 		}
 		this.customUnits = trial;
-		this.db?.setCustomUnit(parsed.name, parsed.definition);
+		this.db?.setCustomUnit(parsed.name, parsed.definition).catch(() => {
+			this.saveError = true;
+		});
 		this.newUnit = '';
 		this.unitError = '';
 		this.engine?.unitNames().then((n) => (this.unitNames = n));
@@ -377,7 +425,9 @@ export class SheetController {
 	removeCustomUnit(name: string) {
 		const { [name]: _drop, ...rest } = this.customUnits;
 		this.customUnits = rest;
-		this.db?.deleteCustomUnit(name);
+		this.db?.deleteCustomUnit(name).catch(() => {
+			this.saveError = true;
+		});
 	}
 
 	// --- revision history -----------------------------------------------------
@@ -490,6 +540,11 @@ export class SheetController {
 
 	async importDb(file: File) {
 		if (!this.db) return;
+		// Drop any pending autosave of the current (pre-import) sheet: import
+		// replaces the whole database, so a late write would inject stale rows
+		// into the freshly-imported data.
+		clearTimeout(this.saveTimer);
+		this.saveTimer = undefined;
 		const bytes = new Uint8Array(await file.arrayBuffer());
 		await this.db.import(bytes);
 		const last = await this.db.loadLast();
@@ -499,7 +554,9 @@ export class SheetController {
 
 	// --- settings persistence + panel toggles ---------------------------------
 	persistSetting(key: string, value: string) {
-		this.db?.setSetting(key, value);
+		this.db?.setSetting(key, value).catch(() => {
+			this.saveError = true;
+		});
 	}
 
 	setMode(mode: 'notepad' | 'tape') {
