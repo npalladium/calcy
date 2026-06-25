@@ -7,17 +7,19 @@ let { c }: { c: SheetController } = $props();
 
 const ISSUE_URL = 'https://github.com/npalladium/calcy/issues/new';
 
-// Open a prefilled bug report. Built at click time (not render) so it can read
-// the browser env and the current sheet — and so prerender never touches
-// `navigator`/`location`. Query keys match the issue-form field ids.
+// Open a prefilled bug report. The sheet itself isn't put in the URL — a packed
+// share link can be multiple KB and GitHub silently truncates long prefills — so
+// instead we copy a share link to the clipboard for the user to paste into the
+// form. Only the small browser-env field is prefilled via the URL. Built at click
+// time so prerender never touches `navigator`/`location`.
 function reportBug() {
+	try {
+		navigator.clipboard?.writeText(c.shareUrl());
+	} catch {
+		// clipboard unavailable — the form still works, just without the paste.
+	}
 	const params = new URLSearchParams({ template: 'bug_report.yml' });
 	if (typeof navigator !== 'undefined') params.set('environment', navigator.userAgent);
-	try {
-		params.set('share-link', c.shareUrl());
-	} catch {
-		// no sheet/location available — skip the prefill rather than fail.
-	}
 	window.open(`${ISSUE_URL}?${params}`, '_blank', 'noopener,noreferrer');
 }
 </script>
@@ -28,7 +30,11 @@ function reportBug() {
 		<span class="dot" aria-hidden="true">·</span>
 		<button class="link" onclick={() => c.openHowItWorks()}>How it works</button>
 		<span class="dot" aria-hidden="true">·</span>
-		<button class="link" onclick={reportBug}>Report a bug ↗</button>
+		<button
+			class="link"
+			onclick={reportBug}
+			title="Copies a share link to your clipboard, then opens a prefilled bug report">Report a bug ↗</button
+		>
 	</nav>
 	<span class="note">Runs locally — no network, no account.</span>
 </footer>

@@ -17,11 +17,14 @@ body:
       placeholder: "I typed `5 km in mi` and expected …, but got …"
     validations:
       required: true
-  - type: input
+  - type: textarea
     id: share-link
     attributes:
       label: Share link or expression
-      description: Paste a Share link, or the expression(s) that trigger the bug.
+      description: >-
+        Paste your sheet's share link here (⌘V / Ctrl+V) — the "Report a bug"
+        button copied one to your clipboard. Or paste the expression(s) that
+        trigger the bug.
       placeholder: "https://npalladium.github.io/calcy/#…  — or  `5 km to mi`"
   - type: textarea
     id: steps
