@@ -54,7 +54,7 @@ const isEmpty = $derived(value.trim() === '');
 			<div class="empty">
 				<p class="big">Type math. Get answers.</p>
 				{#if templates.length}
-					<p class="sub">…or start from a template:</p>
+					<p class="sub">…or start from an example:</p>
 					<div class="tpl-grid">
 						{#each templates as t (t.title)}
 							<button type="button" class="tpl" onclick={() => onloadtemplate?.(t)}>

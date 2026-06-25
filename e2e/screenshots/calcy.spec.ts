@@ -93,7 +93,7 @@ test.describe('calcy screenshots', () => {
 
 	test('templates — toolbar panel', async ({ page }) => {
 		await loadSheet(page, '5 km + 3 mi'); // a non-empty sheet
-		await page.getByRole('button', { name: 'Templates' }).click();
+		await page.getByRole('button', { name: 'Examples' }).click();
 		await expect(page.locator('.panel.templates .open')).toHaveCount(6);
 		const shot = await capture(page, 'templates-panel', { clip: '.panel.templates' });
 		await expectScreenshotWritten(shot.filePath);

@@ -11,9 +11,9 @@ const entries: Entry[] = TEMPLATES.map((t) => ({ id: t.title, title: t.title, su
 const byTitle = new Map(TEMPLATES.map((t) => [t.title, t]));
 </script>
 
-<FloatingPanel label="templates">
+<FloatingPanel label="examples">
 	<div class="hist-head">
-		<span class="fmt-label">start from a template</span>
+		<span class="fmt-label">start from an example</span>
 	</div>
 	<EntryList
 		items={entries}

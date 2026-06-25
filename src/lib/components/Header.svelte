@@ -15,7 +15,7 @@ let { c }: { c: SheetController } = $props();
 		<button role="tab" aria-selected={c.mode === 'tape'} class:active={c.mode === 'tape'} onclick={() => c.setMode('tape')}>Tape</button>
 	</div>
 	<button onclick={() => c.newSheet()}>New</button>
-	<button class:active={c.showTemplates} onclick={() => c.toggleTemplates()} title="Start from a template">Templates</button>
+	<button class:active={c.showTemplates} onclick={() => c.toggleTemplates()} title="Start from an example">Examples</button>
 	<button class:active={c.showSheets} onclick={() => c.toggleSheets()} title="Browse & search sheets (⌘K)">Sheets</button>
 	<button class:active={c.showHistory} onclick={() => c.openHistory()} title="Revision history of this sheet">History</button>
 	<button class:active={c.copied} onclick={() => c.copySheet()} title="Copy sheet + results to clipboard">{c.copied ? '✓ Copied' : 'Copy'}</button>
