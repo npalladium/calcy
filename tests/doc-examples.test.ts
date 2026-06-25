@@ -2,18 +2,19 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { lines } from './helpers';
 
-// The Guide is authored as Markdown and shows worked examples like
-// `12 V / 4 ohm → 3 A`. Those claims must stay true as the engine evolves, and a
-// plausible-looking-but-wrong example is its own kind of bug (see the round that
-// added this: `800 to 1200 per day` didn't even parse). So we read the doc, run
-// every fenced code example through the real engine, and assert that:
-//   - no example line errors, and
-//   - any `expr → result` annotation matches the engine's display output.
+// The Guide is authored as Markdown and shows worked examples whose result is
+// kept in a trailing comment so the line stays copy-pasteable, e.g.
+// `$20 + $5  # → $25.00`. Those claims must stay true as the engine evolves, and
+// a plausible-looking-but-wrong example is its own kind of bug (see the round
+// that added this: `800 to 1200 per day` didn't even parse). So we read the doc,
+// run every fenced code example through the real engine, and assert that:
+//   - no example line errors (calcy ignores the `#` comment when evaluating), and
+//   - any `→ result` annotation matches the engine's display output.
 // Code blocks accumulate (later blocks may reference names defined earlier), so
 // we evaluate each block with all prior blocks prepended as context.
 
 const ARROW = '→';
-const guide = readFileSync(new URL('../src/lib/docs/guide.svx', import.meta.url), 'utf8');
+const guide = readFileSync(new URL('../src/lib/docs/guide.md', import.meta.url), 'utf8');
 
 function fencedBlocks(md: string): string[] {
 	const out: string[] = [];

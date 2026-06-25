@@ -4,11 +4,12 @@ import { mdsvex } from 'mdsvex';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-	// Long-form docs (the Guide, How it works) are authored as Markdown `.svx`
-	// files under src/lib/docs and compiled by mdsvex, so the prose lives in
-	// plain Markdown rather than hand-written HTML inside a component.
-	extensions: ['.svelte', '.svx'],
-	preprocess: [vitePreprocess(), mdsvex({ extensions: ['.svx'] })],
+	// Long-form docs (the Guide, Reference, How it works) are authored as Markdown
+	// under src/lib/docs and compiled by mdsvex. They use the `.md` extension so
+	// GitHub renders them directly; mdsvex only compiles the ones the app imports,
+	// so the repo's other Markdown (README, docs/) is left untouched.
+	extensions: ['.svelte', '.md'],
+	preprocess: [vitePreprocess(), mdsvex({ extensions: ['.md'] })],
 	kit: {
 		// Pure client-side SPA: prerender the shell (index.html, with relative
 		// asset paths so it works at any base path — e.g. GitHub Pages' /calcy/),

@@ -6,11 +6,13 @@ import { CHEAT_SHEET } from '$lib/cheatsheet';
 let {
 	oninsert,
 	onguide,
+	onreference,
 	onhowitworks,
 	onclose
 }: {
 	oninsert: (snippet: string) => void;
 	onguide: () => void;
+	onreference: () => void;
 	onhowitworks: () => void;
 	onclose: () => void;
 } = $props();
@@ -53,6 +55,8 @@ const GROUPS = CHEAT_SHEET;
 	</p>
 	<nav class="docs" aria-label="documentation">
 		<button class="doclink" onclick={onguide}>Read the Guide</button>
+		<span aria-hidden="true">·</span>
+		<button class="doclink" onclick={onreference}>Reference</button>
 		<span aria-hidden="true">·</span>
 		<button class="doclink" onclick={onhowitworks}>How it works</button>
 	</nav>
@@ -113,7 +117,7 @@ const GROUPS = CHEAT_SHEET;
 	}
 	.ex {
 		display: flex;
-		align-items: baseline;
+		align-items: flex-start;
 		justify-content: space-between;
 		gap: 0.6rem;
 		width: 100%;
@@ -133,12 +137,20 @@ const GROUPS = CHEAT_SHEET;
 		font-family: var(--font-mono);
 		font-size: 0.8rem;
 		color: var(--c-value-soft);
-		white-space: pre;
+		/* Wrap long snippets (e.g. bracket(...)) instead of overflowing the panel.
+		   pre-wrap keeps the snippet's own spacing; anywhere breaks an over-long
+		   token so it can never push past the panel edge. min-width:0 lets the
+		   flex item actually shrink below its content width. */
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		min-width: 0;
+		flex: 1 1 auto;
 	}
 	.note {
 		color: var(--text-muted);
 		font-size: 0.7rem;
-		flex-shrink: 0;
+		flex: 0 1 auto;
+		min-width: 0;
 	}
 	.shortcuts {
 		margin-top: 0.85rem;

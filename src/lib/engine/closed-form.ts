@@ -3,7 +3,7 @@
 // has no `meta` or when an operation can't preserve a closed form — this
 // module just short-circuits the cases that have one.
 //
-// Phases (see docs/closed-form-distributions.md):
+// Phases:
 //   Phase 2 — analytical `mean(d)` and `p(d, q)` for known families
 //   Phase 3 — analytical arithmetic on normal / lognormal / scalar × distribution
 //

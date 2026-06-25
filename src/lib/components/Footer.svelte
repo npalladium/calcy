@@ -38,6 +38,8 @@ function reportBug() {
 	<nav aria-label="documentation">
 		<button class="link" onclick={() => c.openGuide()}>Guide</button>
 		<span class="dot" aria-hidden="true">·</span>
+		<button class="link" onclick={() => c.openReference()}>Reference</button>
+		<span class="dot" aria-hidden="true">·</span>
 		<button class="link" onclick={() => c.openHowItWorks()}>How it works</button>
 		<span class="dot" aria-hidden="true">·</span>
 		<button

@@ -10,6 +10,7 @@ import Header from '$lib/components/Header.svelte';
 import HelpPanel from '$lib/components/HelpPanel.svelte';
 import HistoryPanel from '$lib/components/HistoryPanel.svelte';
 import HowItWorksPanel from '$lib/components/HowItWorksPanel.svelte';
+import ReferencePanel from '$lib/components/ReferencePanel.svelte';
 import Inspector from '$lib/components/Inspector.svelte';
 import Notepad from '$lib/components/Notepad.svelte';
 import SettingsPanel from '$lib/components/SettingsPanel.svelte';
@@ -230,12 +231,16 @@ function persistLayout() {
 		<HelpPanel
 			oninsert={insertSnippet}
 			onguide={() => c.openGuide()}
+			onreference={() => c.openReference()}
 			onhowitworks={() => c.openHowItWorks()}
 			onclose={() => (c.showHelp = false)}
 		/>
 	{/if}
 	{#if c.showGuide}
 		<GuidePanel onclose={() => (c.showGuide = false)} />
+	{/if}
+	{#if c.showReference}
+		<ReferencePanel onclose={() => (c.showReference = false)} />
 	{/if}
 	{#if c.showHowItWorks}
 		<HowItWorksPanel onclose={() => (c.showHowItWorks = false)} />
