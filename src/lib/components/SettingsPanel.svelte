@@ -1,6 +1,8 @@
 <script lang="ts">
-// Presentation-only: the settings strip (calendar conventions, sample count,
-// number format, export/import, custom units, AST toggle).
+// Presentation-only: the settings strip. Everyday controls (number format,
+// confidence, sample count) sit up front; power knobs (calendar conventions,
+// custom units, AST toggle, seed) fold into an "Advanced" disclosure so a
+// newcomer isn't shown all of it at once.
 import type { NumberFormat } from '$lib/engine';
 import type { SheetController } from '$lib/state/sheet.svelte';
 import ConfidenceExplainer from './ConfidenceExplainer.svelte';
@@ -22,25 +24,8 @@ const trim = (n: number) => +n.toFixed(4);
 </script>
 
 <section class="panel settings" aria-label="settings">
-	<div class="grp">
-		<span class="grp-label">calendar</span>
-		<label>month <input type="number" step="any" value={trim(c.monthDays)} onchange={(e) => { c.monthDays = +e.currentTarget.value; c.persistSetting('monthDays', String(c.monthDays)); }} /> d</label>
-		<label>year <input type="number" step="any" value={trim(c.yearDays)} onchange={(e) => { c.yearDays = +e.currentTarget.value; c.persistSetting('yearDays', String(c.yearDays)); }} /> d</label>
-	</div>
-
-	<span class="divider" aria-hidden="true"></span>
-
-	<div class="grp" role="group" aria-label="sampling">
-		<span class="grp-label">sampling</span>
-		<label>N <input type="number" step="1000" bind:value={c.samples} onchange={() => c.persistSetting('samples', String(c.samples))} /></label>
-	</div>
-
-	<span class="divider" aria-hidden="true"></span>
-
-	<ConfidenceExplainer level={c.confidence} onCommit={(lv) => c.setConfidence(lv)} />
-
-	<span class="divider" aria-hidden="true"></span>
-
+	<!-- Everyday controls a casual user reaches for: how numbers read, the
+	     confidence band, and the Monte-Carlo sample count. -->
 	<div class="grp" role="group" aria-label="number format">
 		<span class="grp-label">numbers</span>
 		{#each NUMBER_FORMATS as f (f.value)}
@@ -50,32 +35,58 @@ const trim = (n: number) => +n.toFixed(4);
 
 	<span class="divider" aria-hidden="true"></span>
 
-	<div class="grp units" role="group" aria-label="custom units">
-		<span class="grp-label">units</span>
-		{#each Object.entries(c.customUnits) as [name, def] (name)}
-			<span class="chip" title={def}>{name}<button type="button" aria-label="remove {name}" onclick={() => c.removeCustomUnit(name)}>✕</button></span>
-		{/each}
-		<input
-			class="unit-input"
-			placeholder="sprint = 2 week"
-			bind:value={c.newUnit}
-			onkeydown={(e) => { if (e.key === 'Enter') c.applyCustomUnit(); }}
-		/>
-		<button type="button" onclick={() => c.applyCustomUnit()}>Add</button>
-		{#if c.unitError}<span class="unit-err">{c.unitError}</span>{/if}
-	</div>
+	<ConfidenceExplainer level={c.confidence} onCommit={(lv) => c.setConfidence(lv)} />
 
 	<span class="divider" aria-hidden="true"></span>
 
-	<div class="grp">
-		<span class="grp-label">view</span>
-		<label class="debug-toggle">
-			<input type="checkbox" checked={c.debugAst} onchange={() => c.toggleDebug()} />
-			parsed AST in gutter <span class="kbd-inline">⌘D</span>
-		</label>
+	<div class="grp" role="group" aria-label="sampling">
+		<span class="grp-label">sampling</span>
+		<label>N <input type="number" step="1000" bind:value={c.samples} onchange={() => c.persistSetting('samples', String(c.samples))} /></label>
 	</div>
 
-	<span class="muted">seed {c.seedHex} · all compute is local</span>
+	<span class="muted">all compute is local</span>
+
+	<!-- Power knobs folded away so a newcomer isn't shown calendar fractions,
+	     custom units, and an AST toggle next to the basics. -->
+	<details class="advanced">
+		<summary>Advanced</summary>
+		<div class="adv-row">
+			<div class="grp">
+				<span class="grp-label">calendar</span>
+				<label>month <input type="number" step="any" value={trim(c.monthDays)} onchange={(e) => { c.monthDays = +e.currentTarget.value; c.persistSetting('monthDays', String(c.monthDays)); }} /> d</label>
+				<label>year <input type="number" step="any" value={trim(c.yearDays)} onchange={(e) => { c.yearDays = +e.currentTarget.value; c.persistSetting('yearDays', String(c.yearDays)); }} /> d</label>
+			</div>
+
+			<span class="divider" aria-hidden="true"></span>
+
+			<div class="grp units" role="group" aria-label="custom units">
+				<span class="grp-label">units</span>
+				{#each Object.entries(c.customUnits) as [name, def] (name)}
+					<span class="chip" title={def}>{name}<button type="button" aria-label="remove {name}" onclick={() => c.removeCustomUnit(name)}>✕</button></span>
+				{/each}
+				<input
+					class="unit-input"
+					placeholder="sprint = 2 week"
+					bind:value={c.newUnit}
+					onkeydown={(e) => { if (e.key === 'Enter') c.applyCustomUnit(); }}
+				/>
+				<button type="button" onclick={() => c.applyCustomUnit()}>Add</button>
+				{#if c.unitError}<span class="unit-err">{c.unitError}</span>{/if}
+			</div>
+
+			<span class="divider" aria-hidden="true"></span>
+
+			<div class="grp">
+				<span class="grp-label">view</span>
+				<label class="debug-toggle">
+					<input type="checkbox" checked={c.debugAst} onchange={() => c.toggleDebug()} />
+					parsed AST in gutter <span class="kbd-inline">⌘D</span>
+				</label>
+			</div>
+
+			<span class="muted">seed {c.seedHex}</span>
+		</div>
+	</details>
 </section>
 
 <style>
@@ -142,6 +153,35 @@ const trim = (n: number) => +n.toFixed(4);
 	.muted {
 		color: var(--text-muted);
 		font-size: 0.8rem;
+	}
+	/* The Advanced disclosure spans its own line within the wrapping strip, so
+	   opening it reveals the power knobs in a row beneath the basics. */
+	.advanced {
+		flex-basis: 100%;
+	}
+	.advanced > summary {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		width: max-content;
+		cursor: pointer;
+		font-size: 0.72rem;
+		text-transform: uppercase;
+		letter-spacing: 0.07em;
+		color: var(--text-muted);
+		padding: 0.15rem 0;
+	}
+	.advanced > summary:hover {
+		color: var(--text-2);
+	}
+	.adv-row {
+		display: flex;
+		gap: 0.65rem;
+		flex-wrap: wrap;
+		align-items: center;
+		margin-top: 0.5rem;
+		padding-top: 0.5rem;
+		border-top: 1px solid var(--border);
 	}
 	.debug-toggle {
 		display: inline-flex;
