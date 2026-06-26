@@ -39,10 +39,44 @@ CREATE TRIGGER IF NOT EXISTS sheet_au AFTER UPDATE ON sheet BEGIN
 END;
 `;
 
+// The schema above is the v1 baseline. Forward-only migrations live here keyed
+// by the target user_version; each runs its statements in a transaction and
+// bumps PRAGMA user_version on success. A fresh DB (or any pre-migration one,
+// where user_version is still 0) adopts the baseline, then applies 2, 3, ….
+// Example: 2: ['ALTER TABLE sheet ADD COLUMN folder TEXT'].
+const SCHEMA_BASELINE = 1;
+const MIGRATIONS: Record<number, string[]> = {};
+
 let sqlite3: Sqlite3Static;
 let db: Database;
 let pool: any;
 const DB_PATH = '/ucalc.sqlite';
+
+function userVersion(): number {
+	return (rows('PRAGMA user_version')[0]?.user_version as number) ?? 0;
+}
+
+// Create the schema (idempotent) and run any pending migrations. Called on init
+// and after a storage wipe, so a freshly-reset DB lands on the same version.
+function migrate() {
+	db.exec(SCHEMA);
+	// Treat the existing CREATE-IF-NOT-EXISTS schema as the baseline version, so
+	// older databases (user_version 0) and brand-new ones both start at v1.
+	if (userVersion() < SCHEMA_BASELINE) db.exec(`PRAGMA user_version = ${SCHEMA_BASELINE}`);
+	for (let v = userVersion() + 1; ; v++) {
+		const stmts = MIGRATIONS[v];
+		if (!stmts) break;
+		db.exec('BEGIN');
+		try {
+			for (const sql of stmts) db.exec(sql);
+			db.exec(`PRAGMA user_version = ${v}`);
+			db.exec('COMMIT');
+		} catch (e) {
+			db.exec('ROLLBACK');
+			throw e;
+		}
+	}
+}
 
 async function init(): Promise<{ persistent: boolean }> {
 	sqlite3 = await sqlite3InitModule();
@@ -59,7 +93,7 @@ async function init(): Promise<{ persistent: boolean }> {
 		pool = undefined;
 		db = new sqlite3.oo1.DB(':memory:', 'c');
 	}
-	db.exec(SCHEMA);
+	migrate();
 	return { persistent };
 }
 
@@ -182,6 +216,88 @@ async function importBytes(bytes: Uint8Array) {
 	db = new pool.OpfsSAHPoolDb(DB_PATH);
 }
 
+// The three tables a JSON backup carries (the shell wraps these in the
+// versioned envelope; see $lib/sheet/backup).
+function exportData() {
+	return {
+		sheets: rows(
+			'SELECT id, title, body, seed, created_at, updated_at FROM sheet ORDER BY created_at'
+		),
+		custom_units: getCustomUnits(),
+		settings: getSettings()
+	};
+}
+
+// Merge an already-validated backup: INSERT OR IGNORE keeps existing rows, so a
+// re-import never clobbers local edits. One transaction so a mid-import failure
+// leaves the database untouched.
+function importData(d: {
+	sheets: {
+		id: string;
+		title: string;
+		body: string;
+		seed: number;
+		created_at: number;
+		updated_at: number;
+	}[];
+	custom_units: Record<string, string>;
+	settings: Record<string, string>;
+}) {
+	db.exec('BEGIN');
+	try {
+		for (const s of d.sheets) {
+			db.exec({
+				sql: `INSERT OR IGNORE INTO sheet (id, title, body, seed, created_at, updated_at)
+				      VALUES ($id, $title, $body, $seed, $created, $updated)`,
+				bind: {
+					$id: s.id,
+					$title: s.title,
+					$body: s.body,
+					$seed: s.seed,
+					$created: s.created_at,
+					$updated: s.updated_at
+				}
+			});
+		}
+		for (const [name, definition] of Object.entries(d.custom_units))
+			db.exec({
+				sql: 'INSERT OR IGNORE INTO custom_unit (name, definition) VALUES ($n, $d)',
+				bind: { $n: name, $d: definition }
+			});
+		for (const [key, value] of Object.entries(d.settings))
+			db.exec({
+				sql: 'INSERT OR IGNORE INTO setting (key, value) VALUES ($k, $v)',
+				bind: { $k: key, $v: value }
+			});
+		db.exec('COMMIT');
+	} catch (e) {
+		db.exec('ROLLBACK');
+		throw e;
+	}
+}
+
+// Danger zone: delete every sheet + its revision history (the FTS triggers keep
+// the index in sync). Custom units and settings are left intact.
+function clearSheets() {
+	db.exec('DELETE FROM sheet_revision');
+	db.exec('DELETE FROM sheet');
+}
+
+// Danger zone: drop all settings and custom units; sheets are untouched.
+function resetUserData() {
+	db.exec('DELETE FROM setting');
+	db.exec('DELETE FROM custom_unit');
+}
+
+// Here be dragons: wipe the whole on-device store and rebuild an empty schema.
+async function wipeStorage() {
+	if (!pool) throw new Error('wiping storage is unavailable here — calcy is open in another tab');
+	db.close();
+	await pool.wipeFiles();
+	db = new pool.OpfsSAHPoolDb(DB_PATH);
+	migrate();
+}
+
 self.onmessage = async (e: MessageEvent) => {
 	const { id, type, payload } = e.data;
 	try {
@@ -237,6 +353,21 @@ self.onmessage = async (e: MessageEvent) => {
 				break;
 			case 'import':
 				await importBytes(payload.bytes);
+				break;
+			case 'exportData':
+				result = exportData();
+				break;
+			case 'importData':
+				importData(payload);
+				break;
+			case 'clearSheets':
+				clearSheets();
+				break;
+			case 'resetUserData':
+				resetUserData();
+				break;
+			case 'wipeStorage':
+				await wipeStorage();
 				break;
 		}
 		(self as unknown as Worker).postMessage({ id, result });

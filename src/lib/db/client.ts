@@ -98,4 +98,25 @@ export class DbClient {
 	import(bytes: Uint8Array) {
 		return this.call('import', { bytes });
 	}
+	// Versioned JSON backup: the three tables out, a validated payload back in
+	// (merge — existing rows are kept). See $lib/sheet/backup.
+	exportData() {
+		return this.call<{
+			sheets: (SheetRow & { created_at: number; updated_at: number })[];
+			custom_units: Record<string, string>;
+			settings: Record<string, string>;
+		}>('exportData');
+	}
+	importData(data: unknown) {
+		return this.call('importData', data);
+	}
+	clearSheets() {
+		return this.call('clearSheets');
+	}
+	resetUserData() {
+		return this.call('resetUserData');
+	}
+	wipeStorage() {
+		return this.call('wipeStorage');
+	}
 }
