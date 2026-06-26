@@ -18,13 +18,18 @@ let {
 	selected,
 	onselect,
 	oncopy,
-	showAst = false
+	showAst = false,
+	blank = false
 }: {
 	lines: LineResult[];
 	selected: number;
 	onselect: (index: number) => void;
 	oncopy?: (index: number) => void;
 	showAst?: boolean;
+	// True when the whole sheet is empty: the Notepad's onboarding overlay
+	// already explains how to start, so we skip the gutter's own hint rather
+	// than echo it a second time alongside it.
+	blank?: boolean;
 } = $props();
 
 // "Has anything to show" — a sheet that's empty or only comments/blank lines
@@ -116,7 +121,7 @@ export function setScrollTop(top: number) {
 			{/if}
 		</div>
 		{/each}
-	{:else}
+	{:else if !blank}
 		<div class="empty">
 			<p class="empty-title">Results appear here</p>
 			<p class="empty-sub">Type math on the left—each line's answer lands on this row.</p>

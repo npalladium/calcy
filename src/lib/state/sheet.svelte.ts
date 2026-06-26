@@ -136,6 +136,10 @@ export class SheetController {
 	private saveTimer: ReturnType<typeof setTimeout> | undefined;
 
 	// --- derived views ---
+	// True when the sheet has no source at all — the Notepad shows its onboarding
+	// overlay in this state, so the gutter and grid suppress their own "nothing
+	// here" hints to avoid three redundant empty messages across the panes.
+	blank = $derived(this.body.trim() === '');
 	selectedLine = $derived(this.results.find((l) => l.index === this.selected));
 	seedHex = $derived(`0x${(this.seed >>> 0).toString(16)}`);
 	slug = $derived(slugify(this.title));

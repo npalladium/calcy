@@ -4,8 +4,17 @@ import type { LineResult } from '$lib/engine';
 let {
 	lines,
 	selected,
-	onselect
-}: { lines: LineResult[]; selected?: number; onselect?: (index: number) => void } = $props();
+	onselect,
+	blank = false
+}: {
+	lines: LineResult[];
+	selected?: number;
+	onselect?: (index: number) => void;
+	// True when the sheet is empty: the Notepad onboarding is already on screen,
+	// so we leave the grid as bare headers rather than add a third "no results
+	// yet" message to the empty panes.
+	blank?: boolean;
+} = $props();
 
 type Kind = 'error' | 'dist' | 'rate' | 'point' | '';
 interface Row {
@@ -63,7 +72,9 @@ const grid = $derived<Row[]>(
 					<td class="note" title={row.detail || undefined}>{row.note}</td>
 				</tr>
 			{:else}
-				<tr><td class="empty" colspan="6">no results yet</td></tr>
+				{#if !blank}
+					<tr><td class="empty" colspan="6">no results yet</td></tr>
+				{/if}
 			{/each}
 		</tbody>
 	</table>

@@ -60,7 +60,7 @@ const selectedLine = $derived(c.selectedLine);
 				<span class="lg err">error</span>
 			</div>
 		</div>
-		<ResultsGrid lines={c.results} selected={c.selected} onselect={(i) => c.select(i)} />
+		<ResultsGrid lines={c.results} selected={c.selected} onselect={(i) => c.select(i)} blank={c.blank} />
 	</div>
 </aside>
 

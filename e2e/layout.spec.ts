@@ -182,4 +182,30 @@ test.describe('onboarding: errors link to the cheat sheet', () => {
 		await expect(focused).toBeVisible();
 		await expect(focused.locator('h4')).toHaveText('Units & conversion');
 	});
+
+	// Regression: an empty sheet (e.g. after "New sheet" or clearing all data)
+	// shows the Notepad onboarding, so the gutter and results grid must NOT also
+	// print their own "nothing here" hints — three redundant empty messages across
+	// the panes read as a broken layout.
+	test('an empty sheet shows only the onboarding, not the gutter/grid empty hints', async ({
+		page
+	}) => {
+		await page.goto(`/#${shareHash('')}`);
+		await page.locator('.cm-editor').first().waitFor({ state: 'visible' });
+
+		await expect(page.getByText('Type math. Get answers.')).toBeVisible();
+		await expect(page.getByText('Results appear here')).toHaveCount(0);
+		await expect(page.getByText('no results yet')).toHaveCount(0);
+	});
+
+	// Contrast: a non-empty sheet that simply has no computable results (only a
+	// comment) is NOT the onboarding state, so the gutter/grid hints still apply.
+	test('a comment-only sheet still shows the gutter and grid empty hints', async ({ page }) => {
+		await page.goto(`/#${shareHash('# just a note')}`);
+		await page.locator('.cm-editor').first().waitFor({ state: 'visible' });
+
+		await expect(page.getByText('Type math. Get answers.')).toHaveCount(0);
+		await expect(page.getByText('Results appear here')).toBeVisible();
+		await expect(page.getByText('no results yet')).toBeVisible();
+	});
 });

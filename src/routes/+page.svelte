@@ -197,7 +197,7 @@ function persistLayout() {
 				onrighttoggle={() => c.toggleGutter()}
 			/>
 			<section class="gutter-col" aria-label="line results">
-				<Gutter bind:this={gutter} lines={c.results} selected={c.selected} onselect={(i) => c.select(i)} oncopy={(i) => c.copyLineAt(i)} showAst={c.debugAst} />
+				<Gutter bind:this={gutter} lines={c.results} selected={c.selected} onselect={(i) => c.select(i)} oncopy={(i) => c.copyLineAt(i)} showAst={c.debugAst} blank={c.blank} />
 			</section>
 			<Splitter
 				min={MIN_INSPECTOR}
