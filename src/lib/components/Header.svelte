@@ -30,8 +30,8 @@ function onImport(e: Event) {
 	<div class="spacer"></div>
 
 	<div class="modes" role="tablist" aria-label="editor mode">
-		<button role="tab" aria-selected={c.mode === 'notepad'} class:active={c.mode === 'notepad'} onclick={() => c.setMode('notepad')}>Notepad</button>
-		<button role="tab" aria-selected={c.mode === 'tape'} class:active={c.mode === 'tape'} onclick={() => c.setMode('tape')}>Tape</button>
+		<button role="tab" aria-selected={c.mode === 'notepad'} class:active={c.mode === 'notepad'} onclick={() => c.setMode('notepad')} title="Notepad — a multi-line sheet; each line is its own calculation">Notepad</button>
+		<button role="tab" aria-selected={c.mode === 'tape'} class:active={c.mode === 'tape'} onclick={() => c.setMode('tape')} title="Tape — a running adding-machine; enter one expression at a time">Tape</button>
 	</div>
 
 	<span class="divider" aria-hidden="true"></span>

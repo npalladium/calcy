@@ -89,6 +89,9 @@ export class SheetController {
 	showSheets = $state(false);
 	showSettings = $state(false);
 	showHelp = $state(false);
+	// When the help panel is opened from an error, the cheat-sheet group to
+	// scroll to and highlight; undefined for a plain "open help".
+	helpTopic = $state<string | undefined>(undefined);
 	showHistory = $state(false);
 	showTemplates = $state(false);
 	// Long-form docs, shown as full-screen reader overlays.
@@ -634,6 +637,15 @@ export class SheetController {
 
 	toggleHelp() {
 		this.showHelp = !this.showHelp;
+		// A plain open clears any error-driven topic so the panel lands at the top.
+		this.helpTopic = undefined;
+	}
+
+	// Open the cheat sheet focused on a specific group — used by the "see
+	// examples" link on an errored line.
+	openHelp(topic?: string) {
+		this.helpTopic = topic;
+		this.showHelp = true;
 	}
 
 	toggleTemplates() {

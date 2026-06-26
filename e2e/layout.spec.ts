@@ -8,6 +8,13 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
+// Pack a sheet into the share-hash so a scenario loads deterministically
+// (mirrors src/lib/share.ts encodeShare; same helper as the screenshot specs).
+function shareHash(body: string): string {
+	const json = JSON.stringify({ title: 'Demo', body, seed: 0x9e3779b9 });
+	return Buffer.from(encodeURIComponent(json)).toString('base64');
+}
+
 async function boot(page: Page) {
 	await page.goto('/');
 	// Editor (CodeMirror) mounting signals the notepad shell is live.
@@ -150,5 +157,29 @@ test.describe('draggable resize', () => {
 		await splitter.press('Shift+ArrowRight');
 
 		expect(await colWidth(page, '.editor')).toBe(editorBefore + 8 + 32);
+	});
+});
+
+test.describe('onboarding: errors link to the cheat sheet', () => {
+	test('an errored line offers "see examples" that opens help focused on the group', async ({
+		page
+	}) => {
+		// A dimension mismatch maps to the "Units & conversion" cheat-sheet group.
+		await page.goto(`/#${shareHash('5 km + 3 s')}`);
+		await page.locator('.cm-editor').first().waitFor({ state: 'visible' });
+
+		// Select the errored line so the inspector shows its detail.
+		await page.locator('.gutter .row.err').first().click();
+
+		const link = page.locator('.inspector .see-examples');
+		await expect(link).toBeVisible();
+		await expect(link).toContainText('Units & conversion');
+
+		await link.click();
+
+		// The cheat sheet opens with the relevant group flagged as focused.
+		const focused = page.locator('.help section.focus');
+		await expect(focused).toBeVisible();
+		await expect(focused.locator('h4')).toHaveText('Units & conversion');
 	});
 });

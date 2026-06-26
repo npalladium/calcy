@@ -8,16 +8,29 @@ let {
 	onguide,
 	onreference,
 	onhowitworks,
-	onclose
+	onclose,
+	topic
 }: {
 	oninsert: (snippet: string) => void;
 	onguide: () => void;
 	onreference: () => void;
 	onhowitworks: () => void;
 	onclose: () => void;
+	// When opened from an errored line, the group title to scroll to + highlight.
+	topic?: string;
 } = $props();
 
 const GROUPS = CHEAT_SHEET;
+
+// When the panel is opened against a topic, bring that group into view and
+// flag it so the highlight draws the eye. Re-runs if the topic changes while
+// the panel stays open (e.g. a second error of a different kind).
+let groupsEl = $state<HTMLElement>();
+$effect(() => {
+	if (!topic || !groupsEl) return;
+	const el = groupsEl.querySelector<HTMLElement>(`[data-topic="${CSS.escape(topic)}"]`);
+	el?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+});
 </script>
 
 <aside class="help" aria-label="syntax cheat sheet">
@@ -26,9 +39,9 @@ const GROUPS = CHEAT_SHEET;
 		<button class="x" onclick={onclose} aria-label="close help">✕</button>
 	</header>
 	<p class="hint">Click any example to drop it into your sheet.</p>
-	<div class="groups">
+	<div class="groups" bind:this={groupsEl}>
 		{#each GROUPS as g (g.title)}
-			<section>
+			<section data-topic={g.title} class:focus={g.title === topic}>
 				<h4>{g.title}</h4>
 				{#each g.items as it (it.code)}
 					<button class="ex" onclick={() => oninsert(it.code)} title="insert">
@@ -106,6 +119,15 @@ const GROUPS = CHEAT_SHEET;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
+	}
+	/* The group an error pointed at: a soft outline + tint so the eye lands on
+	   it after the scroll, without the jarring flash of an animation. */
+	section.focus {
+		border-radius: 8px;
+		outline: 1px solid var(--border-accent);
+		background: var(--surface-accent);
+		padding: 0.3rem 0.4rem;
+		margin: -0.3rem -0.4rem;
 	}
 	h4 {
 		margin: 0 0 0.35rem;

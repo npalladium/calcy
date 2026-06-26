@@ -234,6 +234,7 @@ function persistLayout() {
 			onreference={() => c.openReference()}
 			onhowitworks={() => c.openHowItWorks()}
 			onclose={() => (c.showHelp = false)}
+			topic={c.helpTopic}
 		/>
 	{/if}
 	{#if c.showGuide}

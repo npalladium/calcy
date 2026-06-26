@@ -4,7 +4,7 @@
 
 import { type EvalCtx, evalRoot } from './eval';
 import { type DisplayValue, formatNumber, formatSummary, type NumberFormat } from './format';
-import { errorHint } from './friendly';
+import { errorHint, errorTopic } from './friendly';
 import { type DistFns, makeGaussian, makeRng, type Summary, summarize } from './mc';
 import { type Line, type Node, parseLine } from './parse';
 import { correlation } from './stats';
@@ -58,6 +58,7 @@ export interface LineResult {
 	comment?: string;
 	error?: string; // precise developer message
 	errorHint?: string; // plain-language overlay (UI shows this first)
+	errorTopic?: string; // cheat-sheet group addressing this error (UI links to it)
 	display?: DisplayValue;
 	summary?: Summary;
 	isRate?: boolean;
@@ -376,11 +377,13 @@ function errMsg(e: unknown): string {
 	return e instanceof Error ? e.message : String(e);
 }
 
-// Raw developer message plus an optional plain-language hint for the UI.
-function toError(e: unknown): { error: string; errorHint?: string } {
+// Raw developer message plus, for the UI, an optional plain-language hint and
+// the cheat-sheet topic that addresses this class of error.
+function toError(e: unknown): { error: string; errorHint?: string; errorTopic?: string } {
 	const error = errMsg(e);
 	const hint = errorHint(error);
-	return hint ? { error, errorHint: hint } : { error };
+	const topic = errorTopic(error);
+	return { error, ...(hint && { errorHint: hint }), ...(topic && { errorTopic: topic }) };
 }
 
 export { astText } from './ast';

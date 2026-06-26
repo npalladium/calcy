@@ -10,39 +10,58 @@
 
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
-const RULES: [RegExp, (m: RegExpExecArray) => string][] = [
+// `topic`, when present, is the title of the cheat-sheet group (see
+// $lib/cheatsheet) whose examples address this class of mistake — the UI turns
+// it into a "see examples" link. Only set it for errors that signal a *concept*
+// gap (wrong kind of quantity, undefined name) rather than a plain typo, where
+// pointing at examples genuinely helps.
+type Rule = [RegExp, (m: RegExpExecArray) => string, string?];
+
+const UNITS = 'Units & conversion';
+
+const RULES: Rule[] = [
 	[
 		/^incompatible dimensions: (.+) \+ (.+)$/,
-		(m) => `Can't add ${m[1]} and ${m[2]}—they measure different things.`
+		(m) => `Can't add ${m[1]} and ${m[2]}—they measure different things.`,
+		UNITS
 	],
 	[
 		/^incompatible dimensions: (.+) - (.+)$/,
-		(m) => `Can't subtract ${m[2]} from ${m[1]}—they measure different things.`
+		(m) => `Can't subtract ${m[2]} from ${m[1]}—they measure different things.`,
+		UNITS
 	],
 	[
 		/^cannot compare (.+) with (.+)$/,
-		(m) => `Can't compare ${m[1]} and ${m[2]}—they're different kinds of quantity.`
+		(m) => `Can't compare ${m[1]} and ${m[2]}—they're different kinds of quantity.`,
+		UNITS
 	],
 	[
 		/^cannot convert (.+) to (.+)$/,
-		(m) => `Can't convert ${m[1]} to ${m[2]}—they measure different things.`
+		(m) => `Can't convert ${m[1]} to ${m[2]}—they measure different things.`,
+		UNITS
 	],
 	[
 		/^unknown identifier '(.+)'$/,
 		(m) =>
-			`I don't recognise "${m[1]}". Check the spelling, or define it as a variable or unit first.`
+			`I don't recognise "${m[1]}". Check the spelling, or define it as a variable or unit first.`,
+		'Variables & comments'
 	],
 	[/^unknown function '(.+)'$/, (m) => `There's no function called "${m[1]}".`],
-	[/^sum: incompatible dimensions/, () => `sum needs every value to be in the same units.`],
+	[/^sum: incompatible dimensions/, () => `sum needs every value to be in the same units.`, UNITS],
 	[/^result is infinite$/, () => `That came out infinite—usually from dividing by zero.`],
 	[
 		/^result is not a real number$/,
 		() => `That didn't produce a real number—check for things like the square root of a negative.`
 	],
-	[/^(.+) must be dimensionless$/, (m) => `${cap(m[1])} must be a plain number, with no units.`],
+	[
+		/^(.+) must be dimensionless$/,
+		(m) => `${cap(m[1])} must be a plain number, with no units.`,
+		UNITS
+	],
 	[
 		/^(.+) must be a deterministic scalar$/,
-		(m) => `${cap(m[1])} must be a single fixed number, not a range.`
+		(m) => `${cap(m[1])} must be a single fixed number, not a range.`,
+		'Uncertainty'
 	],
 	[
 		/trailing tokens after expression/,
@@ -56,6 +75,14 @@ export function errorHint(raw: string): string | undefined {
 	for (const [re, fn] of RULES) {
 		const m = re.exec(raw);
 		if (m) return fn(m);
+	}
+	return undefined;
+}
+
+// The cheat-sheet group whose examples address this error, if any.
+export function errorTopic(raw: string): string | undefined {
+	for (const [re, , topic] of RULES) {
+		if (topic && re.test(raw)) return topic;
 	}
 	return undefined;
 }

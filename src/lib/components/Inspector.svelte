@@ -17,6 +17,11 @@ const selectedLine = $derived(c.selectedLine);
 		     precise developer message stays one hover away. -->
 		<div class="err-box" role="alert" title={selectedLine.errorHint ? selectedLine.error : undefined}>
 			⚠ {selectedLine.errorHint ?? selectedLine.error}
+			{#if selectedLine.errorTopic}
+				<button class="see-examples" onclick={() => c.openHelp(selectedLine.errorTopic)}>
+					See examples: {selectedLine.errorTopic} →
+				</button>
+			{/if}
 		</div>
 	{/if}
 	{#if selectedLine?.display && !selectedLine.error}
@@ -170,5 +175,21 @@ const selectedLine = $derived(c.selectedLine);
 		border-radius: 8px;
 		font-family: var(--font-mono);
 		font-size: 0.8rem;
+	}
+	.see-examples {
+		display: block;
+		margin-top: 0.35rem;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
+		color: var(--accent-soft);
+		font-family: inherit;
+		font-size: 0.76rem;
+		text-align: left;
+	}
+	.see-examples:hover {
+		color: var(--color-brand);
+		text-decoration: underline;
 	}
 </style>

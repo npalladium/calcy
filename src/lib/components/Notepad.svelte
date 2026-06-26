@@ -53,6 +53,7 @@ const isEmpty = $derived(value.trim() === '');
 		{#if isEmpty}
 			<div class="empty">
 				<p class="big">Type math. Get answers.</p>
+				<p class="model">calcy understands units, ranges, and rates over time.</p>
 				{#if templates.length}
 					<p class="sub">…or start from an example:</p>
 					<div class="tpl-grid">
@@ -96,9 +97,17 @@ const isEmpty = $derived(value.trim() === '');
 		color: var(--text-faint);
 	}
 	.empty .big {
-		margin: 0 0 0.6rem;
+		margin: 0 0 0.3rem;
 		color: var(--text-muted);
 		font-size: 1.05rem;
+		font-family:
+			system-ui,
+			sans-serif;
+	}
+	.empty .model {
+		margin: 0 0 0.7rem;
+		color: var(--text-faint);
+		font-size: 0.85rem;
 		font-family:
 			system-ui,
 			sans-serif;
