@@ -208,4 +208,38 @@ test.describe('onboarding: errors link to the cheat sheet', () => {
 		await expect(page.getByText('Results appear here')).toBeVisible();
 		await expect(page.getByText('no results yet')).toBeVisible();
 	});
+
+	// Regression: with its hint suppressed, the empty gutter has no content to
+	// size it, so it must be stretched to fill its column. Otherwise it collapses
+	// to a thin sliver and leaves a dead gap before the inspector.
+	test('the empty gutter fills its column rather than collapsing', async ({ page }) => {
+		await page.goto(`/#${shareHash('')}`);
+		await page.locator('.cm-editor').first().waitFor({ state: 'visible' });
+
+		const widths = await page.evaluate(() => {
+			const w = (s: string) => {
+				const el = document.querySelector(s) as HTMLElement | null;
+				return el ? el.getBoundingClientRect().width : 0;
+			};
+			return { col: w('.gutter-col'), box: w('.gutter') };
+		});
+		expect(widths.col).toBeGreaterThan(100);
+		expect(widths.box).toBeGreaterThan(widths.col - 2); // fills, not a sliver
+	});
+
+	// Regression: the onboarding overlay must clear CodeMirror's line-number
+	// gutter so its text lines up with typed text instead of bleeding over the "1".
+	test('the onboarding text clears the line-number gutter', async ({ page }) => {
+		await page.goto(`/#${shareHash('')}`);
+		await page.locator('.cm-editor').first().waitFor({ state: 'visible' });
+
+		const edges = await page.evaluate(() => {
+			const r = (s: string) => {
+				const el = document.querySelector(s) as HTMLElement | null;
+				return el ? el.getBoundingClientRect() : null;
+			};
+			return { gutterRight: r('.cm-gutters')?.right ?? 0, overlayLeft: r('.empty')?.left ?? 0 };
+		});
+		expect(edges.overlayLeft).toBeGreaterThanOrEqual(edges.gutterRight);
+	});
 });

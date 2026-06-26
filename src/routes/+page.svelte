@@ -287,6 +287,13 @@ function persistLayout() {
 		display: flex;
 		flex-shrink: 0;
 	}
+	/* Stretch the gutter box to fill its column. Without this it sizes to its
+	   content, so an empty gutter (e.g. the onboarding state) collapses to a
+	   thin sliver and leaves a dead gap before the inspector. Mirrors the
+	   .editor / .inspector-col child rules. */
+	.gutter-col > :global(*) {
+		flex: 1;
+	}
 	.inspector-col {
 		flex: 1 1 0;
 		min-width: 0;

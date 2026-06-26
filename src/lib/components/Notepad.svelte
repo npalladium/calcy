@@ -92,7 +92,10 @@ const isEmpty = $derived(value.trim() === '');
 	}
 	.empty {
 		position: absolute;
-		inset: 10px 12px 10px 40px;
+		/* Left inset clears CodeMirror's line-number gutter (~43px for a single
+		   line) so the onboarding text lines up with where typed text begins
+		   rather than bleeding back over the "1". */
+		inset: 10px 12px 10px 46px;
 		pointer-events: none;
 		color: var(--text-faint);
 	}
