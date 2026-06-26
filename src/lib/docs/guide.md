@@ -116,6 +116,26 @@ described something uncertain, it estimates the likely outcome instead. Both are
 real calculations—neither is a guess, and you never have to pick which one you
 want.
 
+### Back up & move your data
+
+Everything lives on your own device, so it's worth keeping a copy. Open
+**Settings** (the ⚙ button) and look under **Export & Import**:
+
+- **Export backup** saves all your sheets, custom units, and settings as a single
+  `.json` file. **Import backup** reads one back in—it *merges*, so anything
+  already here is kept rather than overwritten. This is the easy way to move to
+  another browser or device.
+- **Export / Import database** does the same with the raw `.sqlite` file calcy
+  keeps behind the scenes—an exact, whole-database copy. Importing one *replaces*
+  everything you have.
+
+Further down, **Danger zone** can clear all your sheets or reset your settings,
+and **🐉 Here be dragons** can wipe everything on the device for a fresh start.
+Each asks first, and none of them can be undone.
+
+Per-sheet exports—plain text, Markdown, or CSV of the sheet you're looking at—live
+in the **Copy** menu up in the toolbar.
+
 ### Finding your way around
 
 - **Examples**—open a ready-made sheet to learn from

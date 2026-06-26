@@ -39,3 +39,11 @@ your conclusion doesn't hinge on luck.
 
 The maths behind calcy is tested against a large set of worked examples, so the
 answers stay reliable as it grows.
+
+### Your data stays on your device
+
+Your sheets live in a small database right inside the browser—no account, no
+upload. You can export a backup whenever you like, and that file carries a
+version stamp, so a newer calcy always knows how to read an older backup. The
+same care applies as calcy itself updates: its storage migrates forward in place,
+so a sheet you saved long ago still opens cleanly.

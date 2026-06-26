@@ -122,6 +122,25 @@ Design decisions worth knowing:
   and portable. The OPFS SAH-pool VFS needs no `SharedArrayBuffer`, so **no
   COOP/COEP headers**—it works on any static host.
 
+### Data: backups & migrations
+
+- **Schema migrations** run in the DB worker (`src/lib/db/worker.ts`) off
+  `PRAGMA user_version`. The current `CREATE TABLE IF NOT EXISTS` schema is the
+  **v1 baseline**: any database still at version 0 (or freshly created) is adopted
+  as v1. To evolve the schema, append to the `MIGRATIONS` map keyed by the target
+  version—`{ 2: ['ALTER TABLE sheet ADD COLUMN …'] }`—and the runner applies each
+  pending step in a transaction, bumping `user_version` on success. Forward-only;
+  never edit a migration that has shipped.
+- **JSON backups are versioned** (`src/lib/sheet/backup.ts`). `EXPORT_VERSION`
+  stamps the `{ version, exported_at, sheets, custom_units, settings }` envelope;
+  `validateImport` rejects an unknown version rather than half-applying it, and
+  normalises/drops malformed rows. Bump `EXPORT_VERSION` (and teach
+  `validateImport` to read the older shape) whenever the envelope changes.
+- **Import merges, it doesn't clobber**—the worker uses `INSERT OR IGNORE`, so
+  re-importing a backup keeps existing sheets, units, and settings. The raw
+  `.sqlite` import is the full-replace path. Destructive resets (clear sheets,
+  reset settings, wipe storage) live behind confirms in Settings.
+
 ### Project layout
 
 ```
