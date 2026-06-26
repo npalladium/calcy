@@ -3,10 +3,12 @@
 // History, and Templates panels. Owns only the box chrome; content is a slot.
 import type { Snippet } from 'svelte';
 
-let { label, children }: { label: string; children: Snippet } = $props();
+// `width` lets a heavier panel (settings) claim a little more room than the
+// list panels' default; everything else still scrolls within max-height.
+let { label, width = '340px', children }: { label: string; width?: string; children: Snippet } = $props();
 </script>
 
-<section class="float" aria-label={label}>
+<section class="float" aria-label={label} style="width: {width};">
 	{@render children()}
 </section>
 
@@ -15,7 +17,9 @@ let { label, children }: { label: string; children: Snippet } = $props();
 		position: absolute;
 		right: 0.75rem;
 		top: 3.2rem;
-		width: 340px;
+		/* `width` comes from the prop (inline style); cap it so a wide panel
+		   still fits a narrow viewport. */
+		max-width: calc(100vw - 1.5rem);
 		max-height: 70vh;
 		overflow: auto;
 		display: flex;

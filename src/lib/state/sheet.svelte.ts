@@ -445,6 +445,7 @@ export class SheetController {
 	// --- revision history -----------------------------------------------------
 	async openHistory() {
 		this.showHistory = !this.showHistory;
+		this.showSettings = false;
 		if (this.showHistory && this.db) this.revisions = await this.db.listRevisions(this.sheetId);
 	}
 
@@ -777,12 +778,19 @@ export class SheetController {
 		this.persistSetting('debugAst', String(this.debugAst));
 	}
 
+	// Settings is now a floating panel sharing the top-right corner (and scrim)
+	// with the other overlays, so opening it closes whatever else was open
+	// rather than stacking on top of it. The other openers below return the
+	// favour by clearing `showSettings`.
 	toggleSettings() {
-		this.showSettings = !this.showSettings;
+		const next = !this.showSettings;
+		this.closeOverlays();
+		this.showSettings = next;
 	}
 
 	toggleHelp() {
 		this.showHelp = !this.showHelp;
+		this.showSettings = false;
 		// A plain open clears any error-driven topic so the panel lands at the top.
 		this.helpTopic = undefined;
 	}
@@ -791,34 +799,40 @@ export class SheetController {
 	// examples" link on an errored line.
 	openHelp(topic?: string) {
 		this.helpTopic = topic;
+		this.showSettings = false;
 		this.showHelp = true;
 	}
 
 	toggleTemplates() {
 		this.showTemplates = !this.showTemplates;
+		this.showSettings = false;
 	}
 
 	// Docs are mutually exclusive with each other (one reader at a time).
 	openGuide() {
 		this.showHowItWorks = false;
 		this.showReference = false;
+		this.showSettings = false;
 		this.showGuide = true;
 	}
 
 	openReference() {
 		this.showGuide = false;
 		this.showHowItWorks = false;
+		this.showSettings = false;
 		this.showReference = true;
 	}
 
 	openHowItWorks() {
 		this.showGuide = false;
 		this.showReference = false;
+		this.showSettings = false;
 		this.showHowItWorks = true;
 	}
 
 	async toggleSheets() {
 		this.showSheets = !this.showSheets;
+		this.showSettings = false;
 		if (this.showSheets) await this.refreshSheets();
 	}
 

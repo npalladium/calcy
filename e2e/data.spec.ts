@@ -17,7 +17,8 @@ async function loadSheet(page: Page, body: string, title: string) {
 
 async function openSettings(page: Page) {
 	await page.getByRole('button', { name: 'settings' }).click();
-	await page.locator('.panel.settings').waitFor({ state: 'visible' });
+	// Settings is a floating panel (aria-label "settings"); wait for its title.
+	await page.getByRole('heading', { name: 'Settings' }).waitFor({ state: 'visible' });
 }
 
 test('exports a versioned JSON backup containing the sheet', async ({ page }) => {
@@ -52,12 +53,16 @@ test('clearing all sheets then re-importing the backup restores them (merge)', a
 	await page.getByRole('button', { name: 'Clear', exact: true }).click();
 	await expect(page.locator('.data-msg')).toContainText('cleared');
 
+	// Settings now floats over a scrim that covers the header; close it before
+	// reaching for the toolbar.
+	await page.keyboard.press('Escape');
+
 	// The Budget sheet is gone from the browser.
 	await page.getByRole('button', { name: 'Sheets' }).click();
 	await page.getByRole('menuitem', { name: 'Browse sheets' }).click();
 	await expect(page.locator('.float')).toBeVisible();
 	await expect(page.locator('.float')).not.toContainText('Budget');
-	// Escape closes every overlay, settings included — reopen it for the import.
+	// Close the sheets browser, then reopen settings for the import.
 	await page.keyboard.press('Escape');
 	await openSettings(page);
 
@@ -65,6 +70,8 @@ test('clearing all sheets then re-importing the backup restores them (merge)', a
 	await page.locator('input[type="file"][accept*="json"]').setInputFiles(backupPath);
 	await expect(page.locator('.data-msg')).toContainText('Imported');
 
+	// Dismiss settings (and its scrim) before using the toolbar again.
+	await page.keyboard.press('Escape');
 	await page.getByRole('button', { name: 'Sheets' }).click();
 	await page.getByRole('menuitem', { name: 'Browse sheets' }).click();
 	await expect(page.locator('.float')).toContainText('Budget');

@@ -94,8 +94,8 @@ test.describe('UI walkthrough', () => {
 
 	test('08 settings panel', async ({ page }) => {
 		await loadSheet(page, ESTIMATE);
-		await page.locator('[aria-label="settings"]').click();
-		await page.locator('.panel.settings').waitFor({ state: 'visible' });
+		await page.getByRole('button', { name: 'settings' }).click();
+		await page.getByRole('heading', { name: 'Settings' }).waitFor({ state: 'visible' });
 		await shot(page, '08-settings');
 	});
 

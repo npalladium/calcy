@@ -151,10 +151,6 @@ function persistLayout() {
 <div class="app">
 	<Header {c} />
 
-	{#if c.showSettings}
-		<SettingsPanel {c} />
-	{/if}
-
 	{#if c.ephemeral}
 		<div class="ephemeral-banner" role="status">
 			⚠ calcy is already open in another tab, which owns your saved sheets.
@@ -223,8 +219,12 @@ function persistLayout() {
 
 	<Footer {c} />
 
-	{#if c.showSheets || c.showHelp || c.showHistory || c.showTemplates}
+	{#if c.showSheets || c.showHelp || c.showHistory || c.showTemplates || c.showSettings}
 		<button class="backdrop" aria-label="close" onclick={() => c.closeOverlays()}></button>
+	{/if}
+
+	{#if c.showSettings}
+		<SettingsPanel {c} />
 	{/if}
 
 	{#if c.showHelp}

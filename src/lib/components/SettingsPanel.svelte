@@ -1,12 +1,14 @@
 <script lang="ts">
-// Presentation-only: the settings strip. Everyday controls (number format,
-// confidence, sample count) sit up front; power knobs (calendar conventions,
-// custom units, AST toggle, seed) fold into an "Advanced" disclosure, and the
-// whole-database Export/Import + destructive actions live in stacked cards
-// below — so a newcomer isn't shown all of it at once.
+// Presentation-only: the settings panel. It floats over the sheet (top-right,
+// like Sheets/Help) rather than reflowing the page. Everyday controls (number
+// format, confidence, sample count) sit up front; power knobs (calendar
+// conventions, custom units, AST toggle, seed) fold into an "Advanced"
+// disclosure, and the whole-database Export/Import + destructive actions live
+// in stacked cards below — so a newcomer isn't shown all of it at once.
 import type { NumberFormat } from '$lib/engine';
 import type { SheetController } from '$lib/state/sheet.svelte';
 import ConfidenceExplainer from './ConfidenceExplainer.svelte';
+import FloatingPanel from './FloatingPanel.svelte';
 
 let { c }: { c: SheetController } = $props();
 
@@ -36,7 +38,13 @@ function pick(e: Event, handler: (f: File) => void) {
 }
 </script>
 
-<section class="panel settings" aria-label="settings">
+<FloatingPanel label="settings" width="400px">
+	<div class="stack">
+	<header class="head">
+		<h2>Settings</h2>
+		<button type="button" class="close" aria-label="close settings" onclick={() => c.toggleSettings()}>✕</button>
+	</header>
+
 	<!-- Everyday controls a casual user reaches for: how numbers read, the
 	     confidence band, and the Monte-Carlo sample count. -->
 	<div class="grp" role="group" aria-label="number format">
@@ -46,23 +54,18 @@ function pick(e: Event, handler: (f: File) => void) {
 		{/each}
 	</div>
 
-	<span class="divider" aria-hidden="true"></span>
-
 	<ConfidenceExplainer level={c.confidence} onCommit={(lv) => c.setConfidence(lv)} />
-
-	<span class="divider" aria-hidden="true"></span>
 
 	<div class="grp" role="group" aria-label="sampling">
 		<span class="grp-label">sampling</span>
 		<label>N <input type="number" step="1000" bind:value={c.samples} onchange={() => c.persistSetting('samples', String(c.samples))} /></label>
+		<span class="muted">all compute is local</span>
 	</div>
-
-	<span class="muted">all compute is local</span>
 
 	<!-- Power knobs folded away so a newcomer isn't shown calendar fractions,
 	     custom units, and an AST toggle next to the basics. -->
-	<details class="advanced">
-		<summary>Advanced</summary>
+	<details class="advanced disclosure">
+		<summary><span class="caret" aria-hidden="true">▸</span>Advanced</summary>
 		<div class="adv-row">
 			<div class="grp">
 				<span class="grp-label">calendar</span>
@@ -164,9 +167,9 @@ function pick(e: Event, handler: (f: File) => void) {
 			</div>
 		</section>
 
-		<!-- The nuclear option, folded away behind its own banner. -->
-		<details class="card danger dragons" aria-label="here be dragons">
-			<summary class="card-label danger-label">🐉 Here be dragons</summary>
+		<!-- The nuclear option, folded away behind its own disclosure. -->
+		<details class="card danger dragons disclosure" aria-label="here be dragons">
+			<summary class="card-label danger-label"><span class="caret" aria-hidden="true">▸</span>🐉 Here be dragons</summary>
 			<div class="rows">
 				<div class="row">
 					<div class="row-text">
@@ -178,23 +181,48 @@ function pick(e: Event, handler: (f: File) => void) {
 			</div>
 		</details>
 	</div>
-</section>
+	</div>
+</FloatingPanel>
 
 <style>
-	.panel {
-		border-bottom: 1px solid var(--border);
-		background: var(--surface-1);
-		padding: 0.6rem 0.9rem;
+	/* The panel floats (FloatingPanel owns the box chrome); inside, controls
+	   stack vertically with a little breathing room between clusters. */
+	.stack {
 		display: flex;
-		gap: 0.65rem;
-		flex-wrap: wrap;
-		align-items: center;
+		flex-direction: column;
+		gap: 0.7rem;
 	}
-	.settings label {
+	.head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+	}
+	.head h2 {
+		margin: 0;
+		font-size: 0.95rem;
+		font-weight: 600;
+		color: var(--text);
+	}
+	.close {
+		background: none;
+		border: none;
+		color: var(--text-faint);
+		cursor: pointer;
+		font-size: 0.95rem;
+		line-height: 1;
+		padding: 0.15rem 0.3rem;
+		border-radius: 6px;
+	}
+	.close:hover {
+		color: var(--text);
+		background: var(--surface-3);
+	}
+	.stack label {
 		font-size: 0.85rem;
 		color: var(--text-2);
 	}
-	.settings input[type='number'] {
+	.stack input[type='number'] {
 		width: 7rem;
 		background: var(--surface-2);
 		border: 1px solid var(--border-strong);
@@ -202,8 +230,8 @@ function pick(e: Event, handler: (f: File) => void) {
 		border-radius: 6px;
 		padding: 0.2rem 0.4rem;
 	}
-	/* Each setting cluster is a labelled group; thin dividers separate them so
-	   the strip scans as sections rather than one long flat row. */
+	/* Each setting cluster is a labelled group of inline controls that wraps as
+	   needed within the panel's width. */
 	.grp {
 		display: flex;
 		align-items: center;
@@ -216,12 +244,6 @@ function pick(e: Event, handler: (f: File) => void) {
 		letter-spacing: 0.07em;
 		color: var(--text-muted);
 		margin-right: 0.15rem;
-	}
-	.divider {
-		align-self: stretch;
-		width: 1px;
-		min-height: 1.3rem;
-		background: var(--border);
 	}
 	.grp > button {
 		background: var(--surface-2);
@@ -245,17 +267,29 @@ function pick(e: Event, handler: (f: File) => void) {
 		color: var(--text-muted);
 		font-size: 0.8rem;
 	}
-	/* The Advanced disclosure spans its own line within the wrapping strip, so
-	   opening it reveals the power knobs in a row beneath the basics. */
-	.advanced {
-		flex-basis: 100%;
+	/* Disclosures (Advanced, Here be dragons) hide the native marker and supply
+	   their own caret so it's unmistakably an expand/collapse control. */
+	.disclosure > summary {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		cursor: pointer;
+		list-style: none;
+	}
+	.disclosure > summary::-webkit-details-marker {
+		display: none;
+	}
+	.caret {
+		display: inline-block;
+		font-size: 0.7em;
+		color: var(--text-muted);
+		transition: transform 0.12s ease;
+	}
+	.disclosure[open] > summary > .caret {
+		transform: rotate(90deg);
 	}
 	.advanced > summary {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
 		width: max-content;
-		cursor: pointer;
 		font-size: 0.72rem;
 		text-transform: uppercase;
 		letter-spacing: 0.07em;
@@ -274,15 +308,11 @@ function pick(e: Event, handler: (f: File) => void) {
 		padding-top: 0.5rem;
 		border-top: 1px solid var(--border);
 	}
-	/* Stacked cards (Export & Import / Danger zone / Here be dragons) take their
-	   own full-width column below the inline controls. */
+	/* Stacked cards (Export & Import / Danger zone / Here be dragons). */
 	.sections {
-		flex-basis: 100%;
 		display: flex;
 		flex-direction: column;
 		gap: 0.6rem;
-		margin-top: 0.5rem;
-		max-width: 640px;
 	}
 	.card {
 		border: 1px solid var(--border);
@@ -363,13 +393,6 @@ function pick(e: Event, handler: (f: File) => void) {
 	}
 	.data-msg.err {
 		color: var(--c-error);
-	}
-	.dragons > summary {
-		cursor: pointer;
-		list-style: none;
-	}
-	.dragons > summary::-webkit-details-marker {
-		display: none;
 	}
 	.dragons[open] > summary {
 		margin-bottom: 0.4rem;
