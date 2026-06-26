@@ -3,6 +3,7 @@
 // number format, export/import, custom units, AST toggle).
 import type { NumberFormat } from '$lib/engine';
 import type { SheetController } from '$lib/state/sheet.svelte';
+import ConfidenceExplainer from './ConfidenceExplainer.svelte';
 
 let { c }: { c: SheetController } = $props();
 
@@ -39,11 +40,11 @@ function onImport(e: Event) {
 	<div class="grp" role="group" aria-label="sampling">
 		<span class="grp-label">sampling</span>
 		<label>N <input type="number" step="1000" bind:value={c.samples} onchange={() => c.persistSetting('samples', String(c.samples))} /></label>
-		<span class="sub">interval</span>
-		{#each [0.68, 0.9, 0.95, 0.99] as lv (lv)}
-			<button type="button" class:active={Math.abs(c.confidence - lv) < 1e-9} title={`'a to b' means ${(lv * 100).toFixed(0)}% CI`} onclick={() => c.setConfidence(lv)}>{(lv * 100).toFixed(0)}%</button>
-		{/each}
 	</div>
+
+	<span class="divider" aria-hidden="true"></span>
+
+	<ConfidenceExplainer level={c.confidence} onCommit={(lv) => c.setConfidence(lv)} />
 
 	<span class="divider" aria-hidden="true"></span>
 
@@ -132,11 +133,6 @@ function onImport(e: Event) {
 		letter-spacing: 0.07em;
 		color: var(--text-muted);
 		margin-right: 0.15rem;
-	}
-	.sub {
-		font-size: 0.78rem;
-		color: var(--text-muted);
-		margin-left: 0.35rem;
 	}
 	.divider {
 		align-self: stretch;

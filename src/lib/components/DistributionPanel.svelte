@@ -13,14 +13,28 @@ const withUnit = (v?: string) => `${v ?? ''}${unit ? ` ${unit}` : ''}`;
 // Pre-formatted, display-unit stats from the engine (mean, std dev, …, median, …).
 const stats = $derived(line.display?.stats ?? []);
 const stat = (label: string) => stats.find((s) => s.label === label)?.value;
+
+// The active confidence band, shown as a natural frequency ("9 times in 10")
+// rather than a percentile — frequencies are easier to reason about, and the
+// band tracks the sheet's confidence level.
+const level = $derived(line.display?.level ?? 0.9);
+const pct = $derived(Math.round(level * 100));
+function frequency(l: number): string {
+	const n10 = l * 10;
+	if (Math.abs(n10 - Math.round(n10)) < 1e-9) return `${Math.round(n10)} times in 10`;
+	return `${Math.round(l * 100)} times in 100`;
+}
 </script>
 
 {#if dist}
 	<div class="dist">
 		{#if line.display?.kind === 'dist'}
 			<p class="plain">
-				Most likely <strong>{withUnit(stat('median'))}</strong>—usually between
-				<strong>{stat('p5')}</strong> and <strong>{withUnit(stat('p95'))}</strong>.
+				Most likely <strong>{withUnit(stat('median'))}</strong>—about
+				<strong>{frequency(level)}</strong> it lands between
+				<strong>{line.display?.ciLow}</strong> and
+				<strong>{withUnit(line.display?.ciHigh)}</strong>.
+				<span class="lvl" title="'a to b' means a {pct}% confidence interval">{pct}% CI</span>
 			</p>
 		{:else}
 			<!-- A distribution that collapsed to a single value (e.g. x − x): no
@@ -71,6 +85,18 @@ const stat = (label: string) => stats.find((s) => s.label === label)?.value;
 	.plain strong {
 		color: var(--text);
 		font-weight: 600;
+	}
+	.lvl {
+		display: inline-block;
+		margin-left: 0.3rem;
+		padding: 0 0.35rem;
+		border: 1px solid var(--border-strong);
+		border-radius: 999px;
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		color: var(--text-muted);
+		vertical-align: middle;
+		cursor: help;
 	}
 	details > summary {
 		cursor: pointer;

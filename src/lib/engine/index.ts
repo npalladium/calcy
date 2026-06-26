@@ -245,7 +245,7 @@ export class Engine {
 					if (parsed.type === 'assign') ctx.env.set(parsed.name, value);
 					this.lineValues[index] = value;
 					ctx.above.push(value); // visible to sum(above) on later lines
-					const summary = summarize(value);
+					const summary = summarize(value, this.opts.confidence);
 					const display = formatSummary(
 						summary,
 						pinned,
@@ -298,7 +298,7 @@ export class Engine {
 		return RATE_PERIODS.map((period) => {
 			const secs = this.periodSeconds[period];
 			const scaled = scaleValue(rate, secs, rate.dim); // keep rate dim, relabel time
-			const summary = summarize(scaled);
+			const summary = summarize(scaled, this.opts.confidence);
 			const numLabel = dimLabelOf(numDim);
 			const unit = `${numLabel || '1'}/${PERIOD_UNIT[period]}`;
 			const display = formatSummary(
@@ -320,7 +320,12 @@ export class Engine {
 		const seconds = this.periodSeconds[period] * geometricSum(count, growth);
 		const totalDim = dimMul(v.dim, { time: 1 });
 		const total = scaleValue(v, seconds, totalDim);
-		return formatSummary(summarize(total), undefined, this.opts.numberFormat, this.opts.confidence);
+		return formatSummary(
+			summarize(total, this.opts.confidence),
+			undefined,
+			this.opts.numberFormat,
+			this.opts.confidence
+		);
 	}
 
 	// Which input variables drive this line's variance. For a

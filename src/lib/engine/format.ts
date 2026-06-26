@@ -137,6 +137,10 @@ export interface DisplayValue {
 	p5?: string;
 	p50?: string;
 	p95?: string;
+	// dist: the active-level confidence band, formatted in the display unit. This
+	// is the interval shown in `text`; at level 0.9 it equals p5/p95.
+	ciLow?: string;
+	ciHigh?: string;
 	// dist: human-facing stats for the inspector, each scaled into the display
 	// unit and formatted per the number-format setting. Labels: mean, std dev,
 	// min, p5, p25, median, p75, p95, max. The unit label is appended by the UI.
@@ -224,9 +228,14 @@ export function formatSummary(
 	const fp5 = tfmt(d.p5);
 	const fp50 = tfmt(d.p50);
 	const fp95 = tfmt(d.p95);
+	// The displayed interval is the active-level band (ciLow/ciHigh), so `5 to 6`
+	// shows `(5 … 6)` at any confidence level — at the 0.9 default these equal
+	// p5/p95. The fixed percentiles above still feed the inspector's stats table.
+	const fciLow = tfmt(d.ciLow);
+	const fciHigh = tfmt(d.ciHigh);
 	const text = sym
-		? `${formatMoney(scaled(d.p50, pinned), sym)} (${formatMoney(scaled(d.p5, pinned), sym)} … ${formatMoney(scaled(d.p95, pinned), sym)})`
-		: `${fp50} (${fp5} … ${fp95})${suffix}`;
+		? `${formatMoney(scaled(d.p50, pinned), sym)} (${formatMoney(scaled(d.ciLow, pinned), sym)} … ${formatMoney(scaled(d.ciHigh, pinned), sym)})`
+		: `${fp50} (${fciLow} … ${fciHigh})${suffix}`;
 	// Per-stat figures for the inspector, in the display unit. Percentiles, mean,
 	// min and max are absolute values, so they go through the full scaling
 	// (including any affine offset / log). Std dev is a *spread*, so it scales by
@@ -250,8 +259,10 @@ export function formatSummary(
 		p5,
 		p50,
 		p95,
+		ciLow: fciLow,
+		ciHigh: fciHigh,
 		stats,
 		text,
-		level
+		level: d.ciLevel ?? level
 	};
 }

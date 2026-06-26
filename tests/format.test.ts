@@ -94,24 +94,34 @@ describe('formatNumber', () => {
 });
 
 const point = (value: number, dim = {}): PointSummary => ({ kind: 'point', value, dim });
-const dist = (over: Partial<DistSummary> = {}): DistSummary => ({
-	kind: 'dist',
-	dim: {},
-	mean: 0,
-	sd: 0,
-	min: 0,
-	max: 0,
-	p5: 0,
-	p25: 0,
-	p50: 0,
-	p75: 0,
-	p95: 0,
-	skew: 0,
-	hist: [],
-	histMin: 0,
-	histMax: 0,
-	...over
-});
+const dist = (over: Partial<DistSummary> = {}): DistSummary => {
+	const base = {
+		kind: 'dist' as const,
+		dim: {},
+		mean: 0,
+		sd: 0,
+		min: 0,
+		max: 0,
+		p5: 0,
+		p25: 0,
+		p50: 0,
+		p75: 0,
+		p95: 0,
+		skew: 0,
+		hist: [],
+		histMin: 0,
+		histMax: 0,
+		...over
+	};
+	// At the 0.9 default the displayed band equals p5/p95; mirror that here so
+	// existing text assertions hold unless a test pins its own ci bounds.
+	return {
+		...base,
+		ciLow: over.ciLow ?? base.p5,
+		ciHigh: over.ciHigh ?? base.p95,
+		ciLevel: over.ciLevel ?? 0.9
+	};
+};
 
 describe('formatSummary — points', () => {
 	it('dimensionless and dimensioned points', () => {

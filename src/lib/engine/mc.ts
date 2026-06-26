@@ -275,6 +275,13 @@ export interface DistSummary {
 	p50: number;
 	p75: number;
 	p95: number;
+	// The active confidence band: empirical quantiles at [(1−level)/2, (1+level)/2]
+	// for the sheet's confidence level. This is the interval the result actually
+	// displays, so it matches what the user typed (at level 0.9, ciLow/ciHigh ===
+	// p5/p95). The fixed p5/p25/p50/p75/p95 above stay literal for the inspector.
+	ciLow: number;
+	ciHigh: number;
+	ciLevel: number;
 	// Pearson-style skew proxy: (mean − median) / sd. Positive = right-skewed
 	// (long upper tail), negative = left-skewed. Robust enough to flag tails
 	// without needing a third central moment, and stays finite when sd is
@@ -317,7 +324,7 @@ export function histogram(
 	return { hist, min, max };
 }
 
-export function summarize(v: Value): Summary {
+export function summarize(v: Value, level = 0.9): Summary {
 	if (v.scalar != null) return { kind: 'point', value: v.scalar, dim: v.dim };
 	const samples = v.samples as Float64Array;
 	const sorted = Float64Array.from(samples).sort();
@@ -394,6 +401,11 @@ export function summarize(v: Value): Summary {
 		}
 	}
 	const p50 = quantileSorted(sorted, 0.5);
+	// The displayed band tracks the active confidence level so the shown interval
+	// matches what the user typed (`a to b` puts a/b at exactly these quantiles).
+	const tail = (1 - level) / 2;
+	const ciLow = quantileSorted(sorted, tail);
+	const ciHigh = quantileSorted(sorted, 1 - tail);
 	// Real third-moment skewness via simple-statistics (adjusted Fisher-Pearson
 	// G₁, matches Excel / SAS / SPSS / Minitab). Imported through the local
 	// stats-adapter so mc.ts has no direct dependency on the library. Falls
@@ -411,6 +423,9 @@ export function summarize(v: Value): Summary {
 		p50,
 		p75: quantileSorted(sorted, 0.75),
 		p95: quantileSorted(sorted, 0.95),
+		ciLow,
+		ciHigh,
+		ciLevel: level,
 		skew,
 		hist,
 		histMin: min,

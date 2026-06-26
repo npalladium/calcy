@@ -10,7 +10,17 @@ const distLine: LineResult = {
 	kind: 'value',
 	raw: 'load = (800 to 1200) req/s',
 	isDist: true,
-	display: { kind: 'dist', unit: 'req/s', p5: '850', p50: '1000', p95: '1180', text: '1000 (850 … 1180) req/s' },
+	display: {
+		kind: 'dist',
+		unit: 'req/s',
+		p5: '850',
+		p50: '1000',
+		p95: '1180',
+		ciLow: '850',
+		ciHigh: '1180',
+		level: 0.9,
+		text: '1000 (850 … 1180) req/s'
+	},
 	summary: {
 		kind: 'dist',
 		dim: {},
@@ -23,6 +33,9 @@ const distLine: LineResult = {
 		p50: 1000,
 		p75: 1075,
 		p95: 1180,
+		ciLow: 850,
+		ciHigh: 1180,
+		ciLevel: 0.9,
 		skew: 0.05,
 		hist,
 		histMin: 760,
