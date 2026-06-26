@@ -11,6 +11,27 @@ export interface Template {
 
 export const TEMPLATES: Template[] = [
 	{
+		title: 'Start here',
+		blurb: 'learn calcy in a few lines',
+		body: `# 👋 Start here — calcy in a few lines.
+# Edit anything; each line's answer lands on the right.
+
+# 1 · Plain math, but units are part of it:
+groceries = $80 + $35
+
+# 2 · Name things, then reuse them on later lines:
+weeks   = 4
+monthly = groceries * weeks
+
+# 3 · Unsure of a number? Type a range with "to" and calcy
+#     carries the uncertainty all the way through:
+visitors = 800 to 1200        # a 90% range, not one guess
+revenue  = visitors * $4.50   # the range flows into the result
+
+# 4 · Ask a question about an uncertain result:
+chance(revenue > $4500)       # the odds, given your range`
+	},
+	{
 		title: 'Project estimate',
 		blurb: 'roll up tasks, read the deadline odds',
 		body: `# Project estimate — tasks in plain English
