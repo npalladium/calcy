@@ -16,6 +16,7 @@ import { setLineConversion } from '$lib/editor';
 import type { LineResult, NumberFormat, RatePeriod } from '$lib/engine';
 import { EngineClient } from '$lib/engine/client';
 import { decodeShare, encodeShare } from '$lib/share';
+import { buildExport, type CalcyExport, importSummary, validateImport } from '$lib/sheet/backup';
 import { annotatedBody, slugify, toCsv, toMarkdown } from '$lib/sheet/export';
 import { parseCustomUnitInput, parseSettings } from '$lib/sheet/settings';
 import type { Template } from '$lib/templates';
@@ -105,6 +106,10 @@ export class SheetController {
 	// --- transient action feedback ---
 	copied = $state(false);
 	shared = $state(false);
+	// Result of the last backup/restore or destructive action, shown in the
+	// settings Data section; `dataError` tints it as a failure.
+	dataMessage = $state('');
+	dataError = $state(false);
 	lineCopied = $state(false);
 	rerolled = $state(false);
 	pinUnitInput = $state('');
@@ -557,6 +562,147 @@ export class SheetController {
 		const last = await this.db.loadLast();
 		if (last) this.adopt(last);
 		await this.refreshSheets();
+	}
+
+	// --- versioned JSON backup / restore + destructive ops --------------------
+	async exportJson() {
+		if (!this.db) return;
+		try {
+			await this.flushSave(); // ensure the current sheet's latest edits are included
+			const doc = buildExport(await this.db.exportData(), new Date().toISOString());
+			this.download('calcy-backup.json', JSON.stringify(doc, null, 2), 'application/json');
+			this.setDataMessage(`Exported ${importSummary(doc)}.`);
+		} catch (e) {
+			this.setDataMessage(this.dataErrorText(e, 'Could not export.'), true);
+		}
+	}
+
+	// Merge a JSON backup: existing sheets/units/settings are kept (the worker
+	// does INSERT OR IGNORE), so re-importing never clobbers local work.
+	async importJson(file: File) {
+		if (!this.db) return;
+		let doc: CalcyExport;
+		try {
+			doc = validateImport(JSON.parse(await file.text()));
+		} catch (e) {
+			this.setDataMessage(this.dataErrorText(e, 'Could not read that file.'), true);
+			return;
+		}
+		try {
+			await this.db.importData(doc);
+			await this.reloadSettingsAndUnits();
+			await this.refreshSheets();
+			this.setDataMessage(`Imported ${importSummary(doc)} (existing data kept).`);
+			this.runEval();
+		} catch (e) {
+			this.setDataMessage(this.dataErrorText(e, 'Could not import.'), true);
+		}
+	}
+
+	// Danger zone: drop every sheet + revision, then start on a clean sheet.
+	async clearAllSheets() {
+		if (!this.db) return;
+		if (
+			!confirm(
+				'Delete ALL sheets and their revision history? Custom units and settings are kept. This cannot be undone.'
+			)
+		)
+			return;
+		clearTimeout(this.saveTimer);
+		this.saveTimer = undefined;
+		try {
+			await this.db.clearSheets();
+			await this.startFreshSheet();
+			await this.refreshSheets();
+			this.setDataMessage('All sheets cleared.');
+			this.runEval();
+		} catch (e) {
+			this.setDataMessage(this.dataErrorText(e, 'Could not clear sheets.'), true);
+		}
+	}
+
+	// Danger zone: restore default settings and remove custom units; sheets kept.
+	async resetUserData() {
+		if (!this.db) return;
+		if (
+			!confirm('Reset all settings to defaults and remove every custom unit? Your sheets are kept.')
+		)
+			return;
+		try {
+			await this.db.resetUserData();
+			this.applyDefaultSettings();
+			this.customUnits = {};
+			this.setDataMessage('Settings and custom units reset to defaults.');
+			this.runEval();
+		} catch (e) {
+			this.setDataMessage(this.dataErrorText(e, 'Could not reset settings.'), true);
+		}
+	}
+
+	// Here be dragons: wipe all on-device storage and reset to a clean slate.
+	async wipeStorage() {
+		if (!this.db) return;
+		if (
+			!confirm(
+				'Wipe ALL on-device data — every sheet, revision, custom unit, and setting? calcy resets to a clean slate. This cannot be undone.'
+			)
+		)
+			return;
+		clearTimeout(this.saveTimer);
+		this.saveTimer = undefined;
+		try {
+			await this.db.wipeStorage();
+			this.applyDefaultSettings();
+			this.customUnits = {};
+			await this.startFreshSheet();
+			await this.refreshSheets();
+			this.setDataMessage('On-device storage wiped — calcy is back to a clean slate.');
+			this.runEval();
+		} catch (e) {
+			this.setDataMessage(this.dataErrorText(e, 'Could not wipe storage.'), true);
+		}
+	}
+
+	private dataErrorText(e: unknown, fallback: string): string {
+		return e instanceof Error ? e.message : fallback;
+	}
+
+	private setDataMessage(msg: string, error = false) {
+		this.dataMessage = msg;
+		this.dataError = error;
+	}
+
+	// Adopt a brand-new empty sheet as the current document and persist it, so
+	// there's always a live sheet after a clear/wipe.
+	private async startFreshSheet() {
+		if (!this.db) return;
+		this.sheetId = crypto.randomUUID();
+		this.title = 'Untitled';
+		this.body = '';
+		this.seed = (Math.random() * 2 ** 31) | 0;
+		await this.db.save({ id: this.sheetId, title: this.title, body: this.body, seed: this.seed });
+	}
+
+	private applyDefaultSettings() {
+		this.monthDays = 30.436875;
+		this.yearDays = 365.25;
+		this.samples = 10000;
+		this.numberFormat = 'auto';
+		this.confidence = 0.9;
+		this.debugAst = false;
+	}
+
+	// Re-read content settings + custom units from the DB (after a merge import).
+	private async reloadSettingsAndUnits() {
+		if (!this.db) return;
+		const s = parseSettings(await this.db.getSettings());
+		if (s.monthDays !== undefined) this.monthDays = s.monthDays;
+		if (s.yearDays !== undefined) this.yearDays = s.yearDays;
+		if (s.samples !== undefined) this.samples = s.samples;
+		if (s.numberFormat) this.numberFormat = s.numberFormat;
+		if (s.confidence !== undefined) this.confidence = s.confidence;
+		this.debugAst = s.debugAst;
+		this.customUnits = await this.db.customUnits();
 	}
 
 	// --- settings persistence + panel toggles ---------------------------------

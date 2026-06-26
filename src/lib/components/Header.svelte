@@ -15,13 +15,6 @@ let { c }: { c: SheetController } = $props();
 // flips the label for ~1.2s (controller-driven) so the feedback survives the
 // menu closing.
 const copyLabel = $derived(c.copied ? '✓ Copied' : c.shared ? '✓ Link' : 'Copy');
-
-// Hidden file input for "Import .sqlite"; the menu item just clicks it.
-let importInput = $state<HTMLInputElement>();
-function onImport(e: Event) {
-	const file = (e.target as HTMLInputElement).files?.[0];
-	if (file) c.importDb(file);
-}
 </script>
 
 <header>
@@ -60,11 +53,9 @@ function onImport(e: Event) {
 				<button role="menuitem" onclick={() => { c.exportMd(); close(); }}>Download<span class="hint">.md</span></button>
 				<button role="menuitem" onclick={() => { c.exportCsv(); close(); }}>Download<span class="hint">.csv</span></button>
 				<div role="separator"></div>
-				<button role="menuitem" onclick={() => { c.exportDb(); close(); }}>Export database<span class="hint">.sqlite</span></button>
-				<button role="menuitem" onclick={() => { importInput?.click(); close(); }}>Import database…<span class="hint">.sqlite</span></button>
+				<button role="menuitem" onclick={() => { c.toggleSettings(); close(); }}>Back up &amp; restore…<span class="hint">⚙</span></button>
 			{/snippet}
 		</Menu>
-		<input bind:this={importInput} type="file" accept=".sqlite" onchange={onImport} hidden />
 		<button class="icon" class:pulse={c.rerolled} onclick={() => c.reroll()} title="Resample with a new seed (⌘↵)" aria-label="re-roll">↻</button>
 	</div>
 
