@@ -222,6 +222,27 @@ function foldNumberWords(toks: Tok[]): Tok[] {
 	return out;
 }
 
+// Unicode superscript digits/minus → their ASCII decode, so `m²` lexes as
+// `m ^ 2` and `s⁻¹` lexes as `s ^ -1`. Pure syntactic sugar for `^<integer>`:
+// emitting a real `^` token here means operator precedence (parsePow) just
+// works with no further changes. Deliberately no subscript support.
+const SUPERSCRIPT_DECODE: Record<string, string> = {
+	'⁰': '0',
+	'¹': '1',
+	'²': '2',
+	'³': '3',
+	'⁴': '4',
+	'⁵': '5',
+	'⁶': '6',
+	'⁷': '7',
+	'⁸': '8',
+	'⁹': '9',
+	'⁻': '-'
+};
+const SUPERSCRIPT_CHARS = Object.keys(SUPERSCRIPT_DECODE).join('');
+// A run: one optional leading superscript minus, then 1+ superscript digits.
+const SUPERSCRIPT_RUN = new RegExp(`^⁻?[${SUPERSCRIPT_CHARS.replace('⁻', '')}]+`, 'u');
+
 function tokenize(src: string): Tok[] {
 	const toks: Tok[] = [];
 	let i = 0;
@@ -236,6 +257,31 @@ function tokenize(src: string): Tok[] {
 			continue;
 		}
 		const start = i;
+		// Superscript exponent shorthand: `m²` -> `m` `^` `2`, `s⁻¹` -> `s` `^` `-1`.
+		// Emitted as a real `^` + `num` pair so parsePow handles precedence with
+		// no other changes. A run with no preceding value token still parses
+		// fine here (the token stream is context-free); the parser will error
+		// on it downstream (e.g. `²5`), which is expected/acceptable.
+		if (c in SUPERSCRIPT_DECODE) {
+			const m = SUPERSCRIPT_RUN.exec(src.slice(i));
+			if (m) {
+				const digits = m[0]
+					.split('')
+					.map((ch) => SUPERSCRIPT_DECODE[ch])
+					.join('');
+				const end = i + m[0].length;
+				toks.push({ kind: 'op', value: '^', start: i, end: i });
+				toks.push({
+					kind: 'num',
+					value: digits,
+					num: Number.parseFloat(digits),
+					start: i,
+					end
+				});
+				i = end;
+				continue;
+			}
+		}
 		if (/[0-9]/.test(c) || (c === '.' && /[0-9]/.test(src[i + 1] ?? ''))) {
 			let s = '';
 			while (i < src.length && /[0-9_.eE]/.test(src[i])) {

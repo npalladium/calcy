@@ -25,7 +25,7 @@ describe('dimensional composition', () => {
 		expect(r.isRate).toBe(true);
 	});
 	it('powers scale dimensions', () => {
-		expect(text('(2 m)^2')).toBe('4 m^2');
+		expect(text('(2 m)^2')).toBe('4 m²');
 	});
 	it('rejects adding/subtracting incompatible dimensions with a detailed message', () => {
 		expect(err('5 km + 3 s')).toBe('incompatible dimensions: m + s');

@@ -57,15 +57,25 @@ describe('dimension algebra', () => {
 		expect(dimToString({ amount: 1 })).toBe('mol');
 		expect(dimToString({ luminosity: 1 })).toBe('cd');
 		expect(dimToString({ data: 1 })).toBe('bit');
-		expect(dimToString({ length: 2 })).toBe('m^2');
+		expect(dimToString({ length: 2 })).toBe('m²');
 		// negative exponents render as a `/` denominator, not `^-1`
 		expect(dimToString({ length: 1, time: -1 })).toBe('m/s');
-		expect(dimToString({ length: 1, time: -2 })).toBe('m/s^2');
+		expect(dimToString({ length: 1, time: -2 })).toBe('m/s²');
 		expect(dimToString({ mass: 1, length: -1, time: -1 })).toBe('kg/(m s)');
 		expect(dimToString({ time: -1 })).toBe('1/s');
 		// non-base keys (counts/currency) render verbatim; currency keys use their symbol
 		expect(dimToString({ req: 1 })).toBe('req');
 		expect(dimToString({ usd: 1, time: -1 })).toBe('$/s');
+	});
+
+	it('dimToString renders integer exponents as Unicode superscripts, fractional as ^n', () => {
+		expect(dimToString({ length: 2 })).toBe('m²');
+		expect(dimToString({ length: 1, time: -2 })).toBe('m/s²');
+		expect(dimToString({ length: 3 })).toBe('m³');
+		expect(dimToString({ length: -1 })).toBe('1/m');
+		// fractional exponent (e.g. from sqrt) stays ASCII — the corpus snapshot
+		// "1.41 m^0.5" must not change.
+		expect(dimToString({ length: 0.5 })).toBe('m^0.5');
 	});
 
 	it('isScalar distinguishes deterministic from sampled values', () => {

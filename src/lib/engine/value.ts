@@ -129,15 +129,34 @@ const BASE_SYMBOL: Record<string, string> = {
 	co2: 'gCO2'
 };
 
+// Unicode superscript digits/minus, used to render integer exponents as
+// `m²` instead of `m^2`. Only exact integers get this treatment (see `sup`
+// below) — fractional exponents (e.g. `^0.5`) keep the ASCII `^n` form.
+const SUPERSCRIPT_DIGIT = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+const SUPERSCRIPT_MINUS = '⁻';
+
+// Superscript form of an exponent for display, or the ASCII `^e` fallback
+// when `e` isn't an integer (e.g. 0.5 stays as `^0.5`).
+function sup(e: number): string {
+	if (!Number.isInteger(e)) return `^${e}`;
+	const digits = Math.abs(e)
+		.toString()
+		.split('')
+		.map((c) => SUPERSCRIPT_DIGIT[Number(c)])
+		.join('');
+	return e < 0 ? `${SUPERSCRIPT_MINUS}${digits}` : digits;
+}
+
 // Render with a `/` denominator instead of negative exponents, so a rate reads
 // as "req/s" rather than "req s^-1". Numerator and denominator each list their
-// base symbols (positive exponents kept as `sym^n`); a multi-term denominator is
-// parenthesised, e.g. {mass:1, length:-1, time:-1} -> "kg/(m s)".
+// base symbols (positive exponents kept as superscripts, e.g. `sym²`); a
+// multi-term denominator is parenthesised, e.g. {mass:1, length:-1, time:-1}
+// -> "kg/(m s)".
 export function dimToString(d: Dimension): string {
 	const sym = (k: string) => BASE_SYMBOL[k] ?? k;
 	const term = (k: string) => {
 		const e = Math.abs(d[k]);
-		return e === 1 ? sym(k) : `${sym(k)}^${e}`;
+		return e === 1 ? sym(k) : `${sym(k)}${sup(e)}`;
 	};
 	const keys = Object.keys(d).sort();
 	const num = keys.filter((k) => d[k] > 0);

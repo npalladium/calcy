@@ -16,6 +16,8 @@ in-app cheat sheet (`⌘/`) has click-to-insert examples for all of this.
 
 - Multiplication/division compose dimensions; `+`/`-` require matching
   dimensions; `^` takes a dimensionless exponent.
+- Superscripts are shorthand: `m²`, `s⁻¹`, `9.8 m/s²` mean the same as `^2`,
+  `^-1`, `^2` — accepted as input and used to render integer exponents.
 - **Conversion:** `expr in <unit>` or `expr to <unit>`. A top-level conversion
   also pins the output unit.
 - Results display in the unit you typed; without one, calcy picks a sensible unit
