@@ -19,24 +19,7 @@ import { decodeShare, encodeShare } from '$lib/share';
 import { buildExport, type CalcyExport, importSummary, validateImport } from '$lib/sheet/backup';
 import { annotatedBody, slugify, toCsv, toMarkdown } from '$lib/sheet/export';
 import { parseCustomUnitInput, parseSettings } from '$lib/sheet/settings';
-import type { Template } from '$lib/templates';
-
-const SAMPLE = `# capacity
-rate = 12_000 req/s
-rate in req/day
-rate * 30 day
-
-# uncertain rate + accumulation
-load = (800 to 1200) req/s
-load * 1 month
-
-# storage accrual
-write = (2 to 5) MB/s
-write * 1 day in TB
-
-# correlation via reuse
-x = 1 to 10
-x - x`;
+import { STARTER_TEMPLATE, type Template } from '$lib/templates';
 
 // Layout constants used by the column-toggle actions. Match the page's
 // MIN_*_EDITOR / MIN_*_GUTTER / MIN_INSPECTOR and the default widths above.
@@ -49,8 +32,8 @@ const DEFAULT_LAYOUT_INSPECTOR = 360;
 
 export class SheetController {
 	// --- document state ---
-	body = $state(SAMPLE);
-	title = $state('Untitled');
+	body = $state(STARTER_TEMPLATE.body);
+	title = $state(STARTER_TEMPLATE.title);
 	sheetId = $state<string>(crypto.randomUUID());
 	seed = $state(0x9e3779b9);
 
@@ -129,7 +112,7 @@ export class SheetController {
 	private db: DbClient | undefined;
 	// Gates the autosave effect until boot() has loaded persisted state, so a
 	// slow boot can't fire a debounced save of the constructor defaults (the
-	// SAMPLE body under a throwaway id) before the real sheet is adopted.
+	// starter-template body under a throwaway id) before the real sheet is adopted.
 	private booted = false;
 
 	private evalTimer: ReturnType<typeof setTimeout> | undefined;

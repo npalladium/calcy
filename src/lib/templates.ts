@@ -131,3 +131,7 @@ savings_kg   = naive_kg - shifted_kg
 chance(savings_kg > 100 kgCO2)         # did deferring pay off?`
 	}
 ];
+
+// The guided starter shown on a fresh install (see SheetController's defaults).
+export const STARTER_TEMPLATE: Template =
+	TEMPLATES.find((t) => t.title === 'Start here') ?? TEMPLATES[0];
