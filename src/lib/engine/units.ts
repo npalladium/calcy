@@ -432,6 +432,10 @@ export function buildUnitTable(
 	// ===================== DIMENSIONLESS RATIOS =====================
 	section('Ratios');
 	add(['percent', '%'], DIMLESS, 0.01);
+	// Percentage point: same magnitude as percent (0.01) but named separately
+	// so additive percentage-point math (`50% + 5 pp` = 0.55) reads distinctly
+	// from relative-percent math (`50% * 1.05`).
+	add(['pp', 'percentagepoint', 'percentagepoints'], DIMLESS, 0.01);
 	add(['permille', '‰'], DIMLESS, 1e-3);
 	add(['ppm'], DIMLESS, 1e-6);
 	add(['pphm'], DIMLESS, 1e-8); // parts per hundred million
