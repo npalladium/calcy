@@ -200,7 +200,11 @@ for the full notices):
 
 ## Similar apps
 
-If calcy isn't your fit, these are excellent—and worth learning from:
+If calcy isn't your fit, these are excellent—and worth learning from. What none
+of them do, though, is calcy's whole trick at once: **first-class units,
+Monte-Carlo uncertainty, and rate/accumulation reasoning in one notepad**.
+Soulver has no real uncertainty; Guesstimate and Squiggle have no first-class
+units; Numbat and Frink have no distributions.
 
 - **[Soulver](https://soulver.app/)**—natural-language notepad calculator.
 - **[Numbat](https://numbat.dev/)** (and its predecessor Insect)—a unit-aware
