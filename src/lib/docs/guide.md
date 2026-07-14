@@ -113,8 +113,8 @@ bridge fx = 83 ₹/$
 
 When a calculation has one exact answer, calcy gives you that. When you've
 described something uncertain, it estimates the likely outcome instead. Both are
-real calculations—neither is a guess, and you never have to pick which one you
-want.
+real calculations—the estimate is a principled simulation, not a hand-wave—and
+you never have to pick which one you want.
 
 ### Back up & move your data
 
