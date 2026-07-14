@@ -46,6 +46,19 @@ const rowAst = (i: number): string => {
 	return r?.ast ? astText(r.ast) : '';
 };
 
+// Per-row copy-result affordance, mirroring the Gutter's onCopyClick: copy
+// the row's formatted result and show a brief "✓" tick.
+let justCopied = $state<number | null>(null);
+let copyTimer: ReturnType<typeof setTimeout> | undefined;
+async function copyRow(i: number) {
+	const t = running[i]?.display?.text;
+	if (!t) return;
+	await navigator.clipboard.writeText(t);
+	justCopied = i;
+	if (copyTimer) clearTimeout(copyTimer);
+	copyTimer = setTimeout(() => (justCopied = null), 1200);
+}
+
 async function recompute() {
 	if (!engine) return;
 	running = (
@@ -128,6 +141,15 @@ function onTouchEnd(e: TouchEvent) {
 						<span class="ast" aria-label="parsed AST">{rowAst(i)}</span>
 					{/if}
 				</div>
+				<button
+					type="button"
+					class="icon"
+					class:copied={justCopied === i}
+					onclick={() => copyRow(i)}
+					aria-label="copy step result"
+					title="copy result"
+					disabled={!running[i]?.display}
+				>{justCopied === i ? '✓' : '⧉'}</button>
 				<button class="icon" onclick={() => duplicate(i)} aria-label="duplicate row" title="duplicate (swipe right)">⎘</button>
 				{#if i > 0}
 					<button class="icon" onclick={() => removeRow(i)} aria-label="remove row" title="remove (swipe left)">✕</button>
@@ -265,6 +287,14 @@ function onTouchEnd(e: TouchEvent) {
 	.icon:hover {
 		border-color: var(--color-brand);
 		color: var(--text);
+	}
+	.icon:disabled {
+		opacity: 0.4;
+		cursor: default;
+	}
+	.icon.copied {
+		color: var(--color-brand);
+		border-color: var(--color-brand);
 	}
 	.ops {
 		display: flex;
