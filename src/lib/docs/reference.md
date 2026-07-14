@@ -183,7 +183,7 @@ mean(d)   median(d)   sd(d) / stdev(d)   p(d, q) / percentile(d, q)   min(d)   m
 Elementwise math:
 
 ```
-sqrt(x)   abs(x)   ceil(x)   floor(x)   round(x)   exp(x)   ln(x) / log(x)   log10(x)
+sqrt(x)   abs(x)   ceil(x)   floor(x)   round(x, digits?)   exp(x)   ln(x) / log(x)   log10(x)
 clamp(x, lo[, hi])   # keep x within bounds (2-arg = lower bound only)
 cagr(start, end, periods)   # compound growth rate per period, (end/start)^(1/n)-1
 ```
@@ -376,7 +376,7 @@ Reserved words — don’t use them as variable names.
 | `abs(x)` | Absolute value. |
 | `ceil(x)` | Round up to an integer. |
 | `floor(x)` | Round down to an integer. |
-| `round(x)` | Round to the nearest integer. |
+| `round(x, digits?)` | Round to the nearest integer, or to an optional number of decimal places. |
 | `exp(x)` | e to the power x (dimensionless). |
 | `ln(x)` _(alias: `log`)_ | Natural logarithm (dimensionless). |
 | `log10(x)` | Base-10 logarithm (dimensionless). |

@@ -285,6 +285,7 @@ const PARAMS: Record<string, string[][]> = {
 		['q', 'p']
 	],
 	clamp: [['x'], ['lo', 'min'], ['hi', 'max']],
+	round: [['x'], ['digits', 'n']],
 	cagr: [['start', 'from'], ['end'], ['periods', 'n']],
 	ci: [
 		['lo', 'low'],
@@ -425,7 +426,12 @@ export const FUNCTIONS: FnDoc[] = [
 	{ name: 'abs', category: 'Math', sig: 'abs(x)', summary: 'Absolute value.' },
 	{ name: 'ceil', category: 'Math', sig: 'ceil(x)', summary: 'Round up to an integer.' },
 	{ name: 'floor', category: 'Math', sig: 'floor(x)', summary: 'Round down to an integer.' },
-	{ name: 'round', category: 'Math', sig: 'round(x)', summary: 'Round to the nearest integer.' },
+	{
+		name: 'round',
+		category: 'Math',
+		sig: 'round(x, digits?)',
+		summary: 'Round to the nearest integer, or to an optional number of decimal places.'
+	},
 	{ name: 'exp', category: 'Math', sig: 'exp(x)', summary: 'e to the power x (dimensionless).' },
 	{
 		name: 'ln',
@@ -1047,8 +1053,15 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 			return unaryMap(x, Math.floor, x.dim);
 		}
 		case 'round': {
+			if (args.length > 2) throw new Error('round(x, digits?)');
 			const x = ev(0);
-			return unaryMap(x, Math.round, x.dim);
+			if (args.length === 1) return unaryMap(x, Math.round, x.dim);
+			const digits = ev(1);
+			requireDimless(digits, 'round digits');
+			const n = scalarParam(digits, 'digits');
+			if (!Number.isInteger(n)) throw new Error('round: digits must be an integer');
+			const f = 10 ** n;
+			return unaryMap(x, (v) => Math.round(v * f) / f, x.dim);
 		}
 		case 'exp': {
 			const x = ev(0);
