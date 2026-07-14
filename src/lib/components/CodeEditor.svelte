@@ -11,12 +11,18 @@ let {
 	value = $bindable(),
 	lines = [],
 	unitNames = [],
+	dark = true,
 	oncaretline,
 	onscrolltop
 }: {
 	value: string;
 	lines?: LineResult[];
 	unitNames?: string[];
+	// Resolved app theme, passed down so CodeMirror's own dark/light default
+	// styling (selection contrast, scrollbar colour-scheme, etc.) tracks the
+	// app instead of being hardcoded — the syntax colours themselves are CSS
+	// vars and already follow the `html.dark`/`html.light` class.
+	dark?: boolean;
 	oncaretline?: (line: number) => void;
 	onscrolltop?: (top: number) => void;
 } = $props();
@@ -26,6 +32,10 @@ let host: HTMLDivElement;
 let view: any;
 // biome-ignore lint/suspicious/noExplicitAny: CodeMirror lint fn loaded dynamically.
 let setDiagnostics: ((state: any, diags: any[]) => any) | null = null;
+// biome-ignore lint/suspicious/noExplicitAny: Compartment type loaded dynamically.
+let themeCompartment: any;
+// biome-ignore lint/suspicious/noExplicitAny: EditorView loaded dynamically; built once and reused by the reconfigure effect below.
+let buildTheme: ((isDark: boolean) => any) | null = null;
 let ready = $state(false);
 // Live refs the editor extensions close over (created once, read repeatedly).
 let unitSet = new Set<string>();
@@ -57,7 +67,7 @@ export async function insertSnippet(snippet: string) {
 onMount(() => {
 	let destroyed = false;
 	(async () => {
-		const [{ EditorView, keymap, lineNumbers, drawSelection }, { EditorState }, commands, { autocompletion, completionKeymap }, { StreamLanguage, syntaxHighlighting, HighlightStyle }, { tags: t }, lint] =
+		const [{ EditorView, keymap, lineNumbers, drawSelection }, { EditorState, Compartment }, commands, { autocompletion, completionKeymap }, { StreamLanguage, syntaxHighlighting, HighlightStyle }, { tags: t }, lint] =
 			await Promise.all([
 				import('@codemirror/view'),
 				import('@codemirror/state'),
@@ -139,26 +149,34 @@ onMount(() => {
 			return { from: w.from, options, validFor: /^[A-Za-z_]\w*$/ };
 		};
 
-		const theme = EditorView.theme(
-			{
-				'&': { color: 'var(--text)', backgroundColor: 'transparent', height: '100%' },
-				'.cm-content': {
-					fontFamily: 'var(--font-mono)',
-					fontSize: '14px',
-					lineHeight: '22px',
-					padding: '10px 0',
-					caretColor: 'var(--text)'
+		// The colours themselves are all CSS vars that already follow the
+		// html.dark/html.light class, so `isDark` only affects CodeMirror's own
+		// theme metadata (EditorView.darkTheme facet — scrollbar colour-scheme,
+		// contrast defaults for extensions that consult it). Rebuilt and
+		// reconfigured through a Compartment whenever `dark` changes, so the
+		// editor never has to be torn down and re-created.
+		buildTheme = (isDark: boolean) =>
+			EditorView.theme(
+				{
+					'&': { color: 'var(--text)', backgroundColor: 'transparent', height: '100%' },
+					'.cm-content': {
+						fontFamily: 'var(--font-mono)',
+						fontSize: '14px',
+						lineHeight: '22px',
+						padding: '10px 0',
+						caretColor: 'var(--text)'
+					},
+					'.cm-line': { padding: '0 12px' },
+					'.cm-scroller': { overflow: 'auto', fontFamily: 'var(--font-mono)' },
+					'&.cm-focused': { outline: 'none' },
+					'.cm-cursor': { borderLeftColor: 'var(--text)' },
+					'.cm-selectionBackground, ::selection': { backgroundColor: 'var(--surface-3)' },
+					'&.cm-focused .cm-selectionBackground': { backgroundColor: 'var(--surface-3)' },
+					'.cm-lint-marker': { width: '0.8em' }
 				},
-				'.cm-line': { padding: '0 12px' },
-				'.cm-scroller': { overflow: 'auto', fontFamily: 'var(--font-mono)' },
-				'&.cm-focused': { outline: 'none' },
-				'.cm-cursor': { borderLeftColor: 'var(--text)' },
-				'.cm-selectionBackground, ::selection': { backgroundColor: 'var(--surface-3)' },
-				'&.cm-focused .cm-selectionBackground': { backgroundColor: 'var(--surface-3)' },
-				'.cm-lint-marker': { width: '0.8em' }
-			},
-			{ dark: true }
-		);
+				{ dark: isDark }
+			);
+		themeCompartment = new Compartment();
 
 		// defaultKeymap already binds Mod-/ to toggleComment, but ⌘/ is the
 		// global Help shortcut (see $lib/sheet/keymap.ts) — drop that one entry
@@ -182,7 +200,7 @@ onMount(() => {
 				syntaxHighlighting(highlight),
 				autocompletion({ override: [complete] }),
 				lint.lintGutter(),
-				theme,
+				themeCompartment.of(buildTheme(dark)),
 				EditorView.updateListener.of((u) => {
 					if (u.docChanged) value = u.state.doc.toString();
 					if (u.selectionSet || u.docChanged) {
@@ -213,6 +231,15 @@ $effect(() => {
 	const next = value;
 	if (view && next !== view.state.doc.toString()) {
 		view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
+	}
+});
+
+// Reconfigure CodeMirror's own theme metadata when the resolved app theme
+// flips (explicit pick or a live prefers-color-scheme change).
+$effect(() => {
+	const isDark = dark;
+	if (view && themeCompartment && buildTheme) {
+		view.dispatch({ effects: themeCompartment.reconfigure(buildTheme(isDark)) });
 	}
 });
 

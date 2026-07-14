@@ -5,6 +5,17 @@
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="theme-color" content="#8100ff" />
+		<script>
+			// Settings (including an explicit theme pick) live in an async
+			// sqlite-wasm DB, so they can't be read before first paint. This
+			// synchronous check only covers the default 'system' case — the
+			// common path — so most users never see a flash; an explicit pick
+			// applies a moment later once boot() loads it (see sheet.svelte.ts).
+			if (window.matchMedia && !window.matchMedia('(prefers-color-scheme: dark)').matches) {
+				document.documentElement.classList.remove('dark');
+				document.documentElement.classList.add('light');
+			}
+		</script>
 
 		<title>calcy — unit-aware, uncertainty-propagating calculator</title>
 		<meta

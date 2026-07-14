@@ -15,6 +15,7 @@ let {
 	unitNames = [],
 	templates = [],
 	showAst = false,
+	dark = true,
 	onselect,
 	onloadtemplate,
 	onscrolltop
@@ -25,6 +26,7 @@ let {
 	unitNames?: string[];
 	templates?: Template[];
 	showAst?: boolean;
+	dark?: boolean;
 	onselect: (index: number) => void;
 	onloadtemplate?: (t: Template) => void;
 	onscrolltop?: (top: number) => void;
@@ -47,6 +49,7 @@ const isEmpty = $derived(value.trim() === '');
 			bind:value
 			{lines}
 			{unitNames}
+			{dark}
 			oncaretline={(i) => onselect(i)}
 			{onscrolltop}
 		/>

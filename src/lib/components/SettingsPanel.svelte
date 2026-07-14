@@ -12,6 +12,12 @@ import FloatingPanel from './FloatingPanel.svelte';
 
 let { c }: { c: SheetController } = $props();
 
+const THEMES: { value: 'system' | 'light' | 'dark'; label: string }[] = [
+	{ value: 'system', label: 'System' },
+	{ value: 'light', label: 'Light' },
+	{ value: 'dark', label: 'Dark' }
+];
+
 const NUMBER_FORMATS: { value: NumberFormat; label: string; hint: string }[] = [
 	{ value: 'auto', label: 'Auto', hint: '1.04B — picks per value' },
 	{ value: 'compact', label: '1M / 1B', hint: 'short-scale suffixes' },
@@ -47,6 +53,13 @@ function pick(e: Event, handler: (f: File) => void) {
 
 	<!-- Everyday controls a casual user reaches for: how numbers read, the
 	     confidence band, and the Monte-Carlo sample count. -->
+	<div class="grp" role="group" aria-label="theme">
+		<span class="grp-label">theme</span>
+		{#each THEMES as t (t.value)}
+			<button type="button" aria-pressed={c.theme === t.value} class:active={c.theme === t.value} onclick={() => c.setTheme(t.value)}>{t.label}</button>
+		{/each}
+	</div>
+
 	<div class="grp" role="group" aria-label="number format">
 		<span class="grp-label">numbers</span>
 		{#each NUMBER_FORMATS as f (f.value)}

@@ -49,6 +49,15 @@ export class SheetController {
 	confidence = $state(0.9);
 	debugAst = $state(false);
 	mode = $state<'notepad' | 'tape'>('notepad');
+	// UI colour theme. 'system' follows the OS/browser's prefers-color-scheme;
+	// `systemDark` mirrors that media query live so `resolvedTheme` stays
+	// correct if the user's OS theme flips while the app is open.
+	theme = $state<'system' | 'light' | 'dark'>('system');
+	systemDark = $state(true);
+	private systemDarkQuery?: MediaQueryList;
+	private onSystemDarkChange = (e: MediaQueryListEvent) => {
+		this.systemDark = e.matches;
+	};
 	// Three-pane column widths in pixels. The page hydrates these on boot from
 	// the persisted layout setting; we hold the live values here so the page
 	// can re-render mid-drag without round-tripping to the DB. Defaults fit a
@@ -126,6 +135,10 @@ export class SheetController {
 	selectedLine = $derived(this.results.find((l) => l.index === this.selected));
 	seedHex = $derived(`0x${(this.seed >>> 0).toString(16)}`);
 	slug = $derived(slugify(this.title));
+	resolvedTheme = $derived<'light' | 'dark'>(
+		this.theme === 'system' ? (this.systemDark ? 'dark' : 'light') : this.theme
+	);
+	isDark = $derived(this.resolvedTheme === 'dark');
 
 	constructor() {
 		// Live evaluation, debounced ~120 ms.
@@ -155,10 +168,21 @@ export class SheetController {
 			void this.selected;
 			this.pinUnitInput = '';
 		});
+		// Reflect the resolved theme onto <html> so app.css's `html.light` /
+		// `html.dark` blocks take effect. Runs on boot and on every change
+		// (explicit pick or a live prefers-color-scheme flip).
+		$effect(() => {
+			const dark = this.resolvedTheme === 'dark';
+			document.documentElement.classList.toggle('dark', dark);
+			document.documentElement.classList.toggle('light', !dark);
+		});
 	}
 
 	// Spin up the workers and load persisted/shared state. Browser-only.
 	async boot() {
+		this.systemDarkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+		this.systemDark = this.systemDarkQuery.matches;
+		this.systemDarkQuery.addEventListener('change', this.onSystemDarkChange);
 		this.engine = new EngineClient();
 		this.db = new DbClient();
 		this.engine.unitNames().then((n) => (this.unitNames = n));
@@ -171,6 +195,7 @@ export class SheetController {
 		if (settings.numberFormat) this.numberFormat = settings.numberFormat;
 		if (settings.confidence !== undefined) this.confidence = settings.confidence;
 		if (settings.mode) this.mode = settings.mode;
+		if (settings.theme) this.theme = settings.theme;
 		if (settings.layout) {
 			this.editorWidth = settings.layout.editor;
 			this.gutterWidth = settings.layout.gutter;
@@ -204,6 +229,7 @@ export class SheetController {
 
 	destroy() {
 		this.engine?.destroy();
+		this.systemDarkQuery?.removeEventListener('change', this.onSystemDarkChange);
 	}
 
 	// Copy a loaded sheet row into the live document fields.
@@ -678,6 +704,7 @@ export class SheetController {
 		this.numberFormat = 'auto';
 		this.confidence = 0.9;
 		this.debugAst = false;
+		this.theme = 'system';
 	}
 
 	// Re-read content settings + custom units from the DB (after a merge import).
@@ -689,6 +716,7 @@ export class SheetController {
 		if (s.samples !== undefined) this.samples = s.samples;
 		if (s.numberFormat) this.numberFormat = s.numberFormat;
 		if (s.confidence !== undefined) this.confidence = s.confidence;
+		if (s.theme) this.theme = s.theme;
 		this.debugAst = s.debugAst;
 		this.customUnits = await this.db.customUnits();
 	}
@@ -703,6 +731,11 @@ export class SheetController {
 	setMode(mode: 'notepad' | 'tape') {
 		this.mode = mode;
 		this.persistSetting('mode', mode);
+	}
+
+	setTheme(theme: 'system' | 'light' | 'dark') {
+		this.theme = theme;
+		this.persistSetting('theme', theme);
 	}
 
 	setNumberFormat(fmt: NumberFormat) {

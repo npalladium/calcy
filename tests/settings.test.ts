@@ -24,6 +24,13 @@ describe('parseSettings', () => {
 		expect(parseSettings({ mode: 'notepad' }).mode).toBe('notepad');
 		expect(parseSettings({ mode: 'spreadsheet' }).mode).toBeUndefined();
 	});
+	it('accepts only valid themes', () => {
+		expect(parseSettings({ theme: 'light' }).theme).toBe('light');
+		expect(parseSettings({ theme: 'dark' }).theme).toBe('dark');
+		expect(parseSettings({ theme: 'system' }).theme).toBe('system');
+		expect(parseSettings({ theme: 'solarized' }).theme).toBeUndefined();
+		expect(parseSettings({}).theme).toBeUndefined();
+	});
 	it('always resolves debugAst to a boolean', () => {
 		expect(parseSettings({ debugAst: 'true' }).debugAst).toBe(true);
 		expect(parseSettings({ debugAst: 'false' }).debugAst).toBe(false);

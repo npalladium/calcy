@@ -36,6 +36,25 @@
 	--color-text-dim: #9a97b5;
 	--color-text-faint: #6f6b88;
 
+	/* paper — light-theme counterpart to ink (surfaces, lightest → darkest) */
+	--color-paper-0: #f6f5fb;
+	--color-paper-1: #ffffff;
+	--color-paper-2: #ececf6;
+	--color-paper-3: #dcdaec;
+	--color-paper-4: #c7c4e0;
+
+	/* light-theme text tints, darkest → faintest */
+	--color-text-light: #1c1a2e;
+	--color-text-light-2: #45435c;
+	--color-text-light-dim: #6a6785;
+	--color-text-light-faint: #8b88a6;
+
+	/* light-theme result colour-code — darkened for AA contrast on white */
+	--color-green-light: #1c8a4c;
+	--color-blue-light: #1768c4;
+	--color-red-light: #c8342f;
+	--color-violet-light: #6a4fe0;
+
 	--font-mono: "SFMono-Regular", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
 	--font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
@@ -45,7 +64,10 @@
 	--color-accent-rgb: 138 124 255;
 }
 
-:root {
+/* Dark theme (default — also the fallback if the `dark`/`light` class is
+   somehow absent, so a stale cached shell never renders unstyled). */
+:root,
+html.dark {
 	/* surfaces */
 	--bg: var(--color-ink-0);
 	--surface-1: var(--color-ink-1);
@@ -90,6 +112,59 @@
 	--shadow: rgba(0, 0, 0, 0.5);
 	/* dimming scrim behind floating panels / overlays */
 	--scrim: rgba(0, 0, 0, 0.45);
+
+	color-scheme: dark;
+}
+
+/* Light theme: same token names, `paper`/`text-light`/darkened result colours
+   so every component that only ever references the semantic tokens needs no
+   per-component change. */
+html.light {
+	/* surfaces */
+	--bg: var(--color-paper-0);
+	--surface-1: var(--color-paper-1);
+	--surface-2: var(--color-paper-2);
+	--surface-3: var(--color-paper-3);
+	--surface-sel: rgba(199, 196, 224, 0.55);
+	--surface-accent: #ece8fb;
+
+	/* borders */
+	--border: var(--color-paper-3);
+	--border-strong: var(--color-paper-4);
+	--border-accent: #cabdf2;
+
+	/* text */
+	--text: var(--color-text-light);
+	--text-2: var(--color-text-light-2);
+	--text-muted: var(--color-text-light-dim);
+	--text-faint: var(--color-text-light-faint);
+
+	/* accent */
+	--accent: var(--color-violet-deep);
+	--accent-soft: var(--color-violet-light);
+	--accent-deep: var(--color-violet-deep);
+
+	/* result semantics */
+	--c-value: var(--color-green-light);
+	--c-value-soft: #2fae67;
+	--c-rate: var(--color-blue-light);
+	--c-dist: var(--color-violet-light);
+	--c-error: var(--color-red-light);
+
+	/* status surfaces */
+	--danger: var(--color-red-light);
+	--danger-bg: #fdecec;
+	--danger-border: #f3b9b6;
+	--warn: #a35a12;
+	--warn-soft: #7a4109;
+	--warn-bg: #fdf1e2;
+	--warn-border: #f0cd9c;
+
+	/* effects */
+	--shadow: rgba(20, 18, 40, 0.14);
+	--scrim: rgba(30, 26, 54, 0.25);
+
+	color-scheme: light;
 }
 
 html,

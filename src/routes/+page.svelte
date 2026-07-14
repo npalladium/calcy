@@ -178,7 +178,7 @@ function persistLayout() {
 	>
 		<section class="editor" aria-label="calculator">
 			{#if c.mode === 'notepad'}
-				<Notepad bind:this={notepad} bind:value={c.body} lines={c.results} selected={c.selected} unitNames={c.unitNames} templates={TEMPLATES} showAst={c.debugAst} onselect={(i) => c.select(i)} onloadtemplate={(t) => c.loadTemplate(t)} onscrolltop={(top) => gutter?.setScrollTop(top)} />
+				<Notepad bind:this={notepad} bind:value={c.body} lines={c.results} selected={c.selected} unitNames={c.unitNames} templates={TEMPLATES} showAst={c.debugAst} dark={c.isDark} onselect={(i) => c.select(i)} onloadtemplate={(t) => c.loadTemplate(t)} onscrolltop={(top) => gutter?.setScrollTop(top)} />
 			{:else if c.engine}
 				<Tape onexpr={(expr, append) => c.applyTapeExpr(expr, append)} engine={c.engine} seed={c.seed} samples={c.samples} numberFormat={c.numberFormat} customUnits={c.customUnits} showAst={c.debugAst} />
 			{/if}

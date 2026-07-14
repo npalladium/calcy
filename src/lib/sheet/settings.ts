@@ -9,6 +9,8 @@ export interface ParsedSettings {
 	samples?: number;
 	numberFormat?: NumberFormat;
 	mode?: 'notepad' | 'tape';
+	// UI colour theme. 'system' (the default) follows prefers-color-scheme.
+	theme?: 'system' | 'light' | 'dark';
 	// Confidence level used by `lo to hi` / `about` / `~` to map a symmetric
 	// interval onto a normal/lognormal. In (0, 1). Default 0.90.
 	confidence?: number;
@@ -49,6 +51,8 @@ export function parseSettings(raw: Record<string, string>): ParsedSettings {
 	if (NUMBER_FORMATS.includes(raw.numberFormat))
 		out.numberFormat = raw.numberFormat as NumberFormat;
 	if (raw.mode === 'tape' || raw.mode === 'notepad') out.mode = raw.mode;
+	if (raw.theme === 'system' || raw.theme === 'light' || raw.theme === 'dark')
+		out.theme = raw.theme;
 	if (raw.confidence) {
 		const c = Number(raw.confidence);
 		if (c > 0 && c < 1) out.confidence = c;
