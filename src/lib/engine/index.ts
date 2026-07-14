@@ -388,5 +388,3 @@ function toError(e: unknown): { error: string; errorHint?: string; errorTopic?: 
 
 export { astText } from './ast';
 export type { DisplayValue, NumberFormat } from './format';
-export type { Summary } from './mc';
-export type { Node };

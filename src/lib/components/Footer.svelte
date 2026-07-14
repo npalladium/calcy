@@ -26,6 +26,10 @@ function reportBug() {
 	} catch {
 		// clipboard unavailable — the form still works, just without the paste.
 	}
+	// Plain, disposable URLSearchParams: built, read, and discarded within this
+	// function — never assigned to component state — so Svelte reactivity
+	// tracking isn't relevant here.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
 	const params = new URLSearchParams({ template: 'bug_report.yml' });
 	if (typeof navigator !== 'undefined') params.set('environment', navigator.userAgent);
 	// Prefill the build so a report is pinned to an exact version + commit.

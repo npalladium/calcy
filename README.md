@@ -59,7 +59,9 @@ Quality gates:
 ```sh
 pnpm check        # svelte-check + tsc
 pnpm lint         # biome
+pnpm lint:svelte  # eslint (svelte-plugin), .svelte files only
 pnpm format       # biome --write
+pnpm knip         # dead code / unused exports / unused deps
 pnpm test         # vitest (unit, property, golden)
 pnpm mutation     # stryker mutation testing
 ```

@@ -30,12 +30,3 @@ export function setLineConversion(line: string, unit: string): string {
 	const rebuilt = u ? `${core} in ${u}` : core;
 	return comment ? `${rebuilt} ${comment}` : rebuilt;
 }
-
-// The identifier-like token immediately before `pos`, used to anchor
-// autocompletion. Returns null when the caret is not on a word.
-export function wordBefore(text: string, pos: number): { from: number; word: string } | null {
-	let from = pos;
-	while (from > 0 && /[A-Za-z_]/.test(text[from - 1])) from--;
-	if (from === pos) return null;
-	return { from, word: text.slice(from, pos) };
-}
