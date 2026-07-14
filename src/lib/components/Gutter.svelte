@@ -9,7 +9,9 @@
 // in lockstep with the editor via `scrollTop` writes from CodeEditor.
 //
 // Each row also has a hover-revealed copy button so the user can grab a
-// single result without first selecting the line in the inspector.
+// single result without first selecting the line in the inspector, plus an
+// insert button that drops the line's value (or variable name, for an
+// assignment) at the editor cursor.
 import { astText, type LineResult } from '$lib/engine';
 import Sparkline from './Sparkline.svelte';
 
@@ -18,6 +20,7 @@ let {
 	selected,
 	onselect,
 	oncopy,
+	oninsert,
 	showAst = false,
 	blank = false
 }: {
@@ -25,6 +28,9 @@ let {
 	selected: number;
 	onselect: (index: number) => void;
 	oncopy?: (index: number) => void;
+	// Receives the text to drop at the cursor: the variable name for a named
+	// assignment, otherwise the line's formatted result.
+	oninsert?: (text: string) => void;
 	showAst?: boolean;
 	// True when the whole sheet is empty: the Notepad's onboarding overlay
 	// already explains how to start, so we skip the gutter's own hint rather
@@ -58,6 +64,22 @@ function onCopyClick(e: MouseEvent, index: number) {
 	justCopied = index;
 	if (copyTimer) clearTimeout(copyTimer);
 	copyTimer = setTimeout(() => (justCopied = null), 1200);
+}
+
+// A named assignment inserts its name (so it can be referenced elsewhere);
+// any other line with a value inserts the formatted result. Errors and
+// comment/blank/unitdef rows have nothing insertable.
+function insertValueFor(l: LineResult): string | null {
+	if (l.name) return l.name;
+	if (l.kind === 'value' && !l.error && l.display?.text) return l.display.text;
+	return null;
+}
+
+function onInsertClick(e: MouseEvent, l: LineResult) {
+	e.stopPropagation(); // don't also select the row
+	const text = insertValueFor(l);
+	if (!text || !oninsert) return;
+	oninsert(text);
 }
 
 // Imperative ref so CodeEditor can sync the gutter's scrollTop from outside.
@@ -106,6 +128,16 @@ export function setScrollTop(top: number) {
 					{/if}
 				</span>
 			</span>
+			{#if oninsert && insertValueFor(l)}
+				<button
+					type="button"
+					class="insert-btn"
+					aria-label="insert into editor"
+					title={l.name ? `insert ${l.name}` : 'insert result'}
+					tabindex="-1"
+					onclick={(e) => onInsertClick(e, l)}
+				>⇤</button>
+			{/if}
 			{#if oncopy}
 				<button
 					type="button"
@@ -168,8 +200,8 @@ export function setScrollTop(top: number) {
 		align-items: center;
 		gap: 5px;
 		height: 22px;
-		/* Leave room for the absolutely-positioned copy button on the right. */
-		padding-right: 22px;
+		/* Leave room for the absolutely-positioned insert + copy buttons on the right. */
+		padding-right: 42px;
 	}
 	.row .txt {
 		white-space: nowrap;
@@ -252,6 +284,38 @@ export function setScrollTop(top: number) {
 		opacity: 1;
 	}
 	.copy-btn:hover {
+		color: var(--text);
+		border-color: var(--color-brand);
+	}
+	/* The insert button sits just to the left of the copy button, same size
+	   and hover-reveal behaviour. */
+	.insert-btn {
+		position: absolute;
+		top: 50%;
+		right: 22px;
+		transform: translateY(-50%);
+		width: 18px;
+		height: 18px;
+		padding: 0;
+		border: 1px solid var(--border-strong);
+		border-radius: 4px;
+		background: var(--surface-1);
+		color: var(--text-muted);
+		font-size: 11px;
+		line-height: 1;
+		cursor: pointer;
+		opacity: 0;
+		transition: opacity 0.12s;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1;
+	}
+	.row:hover .insert-btn,
+	.insert-btn:focus-visible {
+		opacity: 1;
+	}
+	.insert-btn:hover {
 		color: var(--text);
 		border-color: var(--color-brand);
 	}
