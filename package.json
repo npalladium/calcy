@@ -25,7 +25,7 @@
 		"prepare": "simple-git-hooks"
 	},
 	"simple-git-hooks": {
-		"pre-push": "pnpm lint && pnpm check && pnpm test"
+		"pre-push": "pnpm lint && pnpm lint:svelte && pnpm check && pnpm knip && pnpm test"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.0",
