@@ -61,6 +61,12 @@ $effect(() => {
 			<span><kbd>⌘</kbd><kbd>↵</kbd> re-roll</span>
 			<span><kbd>Esc</kbd> close</span>
 		</div>
+		<p class="hint">In the editor:</p>
+		<div class="keys">
+			<span><kbd>⌘</kbd><kbd>⇧</kbd><kbd>/</kbd> toggle comment</span>
+			<span><kbd>⌥</kbd><kbd>↑</kbd>/<kbd>↓</kbd> move line</span>
+			<span><kbd>⇧</kbd><kbd>⌥</kbd><kbd>↓</kbd> duplicate line</span>
+		</div>
 	</section>
 	<p class="foot">
 		A range shows the most likely value and the <em>likely range</em> (5th–95th percentile, i.e. 90%

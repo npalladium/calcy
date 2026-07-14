@@ -93,7 +93,9 @@ onMount(() => {
 				unit: t.typeName,
 				fn: t.function(t.variableName),
 				var: t.variableName
-			}
+			},
+			// Tells toggleLineComment which token to insert/strip (see keymap below).
+			languageData: { commentTokens: { line: '#' } }
 		});
 
 		const highlight = HighlightStyle.define([
@@ -158,13 +160,24 @@ onMount(() => {
 			{ dark: true }
 		);
 
+		// defaultKeymap already binds Mod-/ to toggleComment, but ⌘/ is the
+		// global Help shortcut (see $lib/sheet/keymap.ts) — drop that one entry
+		// and rebind comment-toggle to Mod-Shift-/ so the two don't collide.
+		// defaultKeymap's Alt-ArrowUp/Down (moveLineUp/moveLineDown) and
+		// Shift-Alt-ArrowUp/Down (copyLineUp/copyLineDown, i.e. duplicate line)
+		// bindings are kept as-is.
+		const lineKeymap = [
+			...commands.defaultKeymap.filter((b: { key?: string }) => b.key !== 'Mod-/'),
+			{ key: 'Mod-Shift-/', run: commands.toggleLineComment }
+		];
+
 		const state = EditorState.create({
 			doc: value,
 			extensions: [
 				lineNumbers(),
 				drawSelection(),
 				commands.history(),
-				keymap.of([...commands.defaultKeymap, ...commands.historyKeymap, ...completionKeymap]),
+				keymap.of([...lineKeymap, ...commands.historyKeymap, ...completionKeymap]),
 				calc,
 				syntaxHighlighting(highlight),
 				autocompletion({ override: [complete] }),
