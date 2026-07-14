@@ -282,6 +282,56 @@ function tokenize(src: string): Tok[] {
 				continue;
 			}
 		}
+		// Hex (`0x…`) / binary (`0b…`) integer literals, checked before the
+		// decimal path so `0xFF`/`0b1010` don't fall into the ordinary number
+		// lexer (which would stop at `x`/`b`). `_` separators are allowed and
+		// stripped, same as decimal literals. No magnitude suffix (`k`/`M`)
+		// applies here — `0x10k` is `0x10` followed by the identifier `k`. A
+		// `0x`/`0b` with no valid digits after it isn't consumed here, so it
+		// falls through to the decimal path (`0`) followed by an identifier
+		// (`x…`/`b…`), which is the existing/expected error behaviour.
+		if (
+			c === '0' &&
+			(src[i + 1] === 'x' || src[i + 1] === 'X') &&
+			/[0-9a-fA-F_]/.test(src[i + 2] ?? '')
+		) {
+			let s = '';
+			let j = i + 2;
+			while (j < src.length && /[0-9a-fA-F_]/.test(src[j])) {
+				if (src[j] !== '_') s += src[j];
+				j++;
+			}
+			if (s.length > 0) {
+				toks.push({
+					kind: 'num',
+					value: src.slice(i, j),
+					num: Number.parseInt(s, 16),
+					start,
+					end: j
+				});
+				i = j;
+				continue;
+			}
+		}
+		if (c === '0' && (src[i + 1] === 'b' || src[i + 1] === 'B') && /[01_]/.test(src[i + 2] ?? '')) {
+			let s = '';
+			let j = i + 2;
+			while (j < src.length && /[01_]/.test(src[j])) {
+				if (src[j] !== '_') s += src[j];
+				j++;
+			}
+			if (s.length > 0) {
+				toks.push({
+					kind: 'num',
+					value: src.slice(i, j),
+					num: Number.parseInt(s, 2),
+					start,
+					end: j
+				});
+				i = j;
+				continue;
+			}
+		}
 		if (/[0-9]/.test(c) || (c === '.' && /[0-9]/.test(src[i + 1] ?? ''))) {
 			let s = '';
 			while (i < src.length && /[0-9_.eE]/.test(src[i])) {

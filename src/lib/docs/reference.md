@@ -11,6 +11,7 @@ in-app cheat sheet (`⌘/`) has click-to-insert examples for all of this.
 60 km / 1 h                # compose dimensions -> speed
 1.2 GB in MB               # convert with `in` (`to` is for confidence intervals)
 12_000 req/s               # `_` digit separators; `12k`/`1.2M` suffixes also work
+0xFF + 0b1010               # hex and binary integer literals
 5 km + 3 s                 # ERROR: incompatible dimensions
 ```
 
