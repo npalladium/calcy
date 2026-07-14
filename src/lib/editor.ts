@@ -18,6 +18,15 @@ export function collectVariables(text: string): string[] {
 	return out;
 }
 
+// Insertion text + cursor offset for a function-name autocomplete pick.
+// Inserting just the bare name would leave the user to type the parens
+// themselves; inserting `name(` and landing the cursor right after the
+// paren puts them straight into the argument list.
+export function functionInsertion(name: string): { insert: string; cursorOffset: number } {
+	const insert = `${name}(`;
+	return { insert, cursorOffset: insert.length };
+}
+
 // Pin (or clear) the output unit of a single sheet line by rewriting its
 // trailing `in`/`to` conversion — the sheet text stays the source of truth.
 // A trailing comment is preserved. An empty unit removes the conversion.

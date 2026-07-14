@@ -387,4 +387,5 @@ function toError(e: unknown): { error: string; errorHint?: string; errorTopic?: 
 }
 
 export { astText } from './ast';
+export { type FnDoc, FUNCTIONS } from './eval';
 export type { DisplayValue, NumberFormat } from './format';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collectVariables, setLineConversion } from '../src/lib/editor';
+import { collectVariables, functionInsertion, setLineConversion } from '../src/lib/editor';
 
 describe('collectVariables', () => {
 	it('collects assigned names in order', () => {
@@ -50,5 +50,11 @@ describe('setLineConversion', () => {
 
 	it('does not mistake the unit "min" for the in keyword', () => {
 		expect(setLineConversion('5 min', 'h')).toBe('5 min in h');
+	});
+});
+
+describe('functionInsertion', () => {
+	it('inserts the name with an opening paren and lands the cursor inside it', () => {
+		expect(functionInsertion('normal')).toEqual({ insert: 'normal(', cursorOffset: 7 });
 	});
 });

@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onMount, tick } from 'svelte';
-import type { LineResult } from '$lib/engine';
-import { collectVariables } from '$lib/editor';
+import { FUNCTIONS, type LineResult } from '$lib/engine';
+import { collectVariables, functionInsertion } from '$lib/editor';
 
 // CodeMirror-backed editor for the calc language: syntax highlighting,
 // unit/variable autocomplete, and inline error markers driven by per-line
@@ -111,10 +111,28 @@ onMount(() => {
 			const w = ctx.matchBefore(/[A-Za-z_]\w*/);
 			if (!w || (w.from === w.to && !ctx.explicit)) return null;
 			const vars = collectVariables(ctx.state.doc.toString());
+			// Insert `name(` and land the cursor inside the parens rather than
+			// the bare label, so picking a function drops the user straight into
+			// its argument list.
+			// biome-ignore lint/suspicious/noExplicitAny: Completion/view types from dynamic import.
+			const applyFunction = (name: string) => (view: any, _completion: any, from: number, to: number) => {
+				const { insert, cursorOffset } = functionInsertion(name);
+				view.dispatch({
+					changes: { from, to, insert },
+					selection: { anchor: from + cursorOffset }
+				});
+			};
 			const options = [
 				...['to', 'in', 'unit'].map((label) => ({ label, type: 'keyword' })),
 				...vars.map((label) => ({ label, type: 'variable' })),
-				...unitNames.map((label) => ({ label, type: 'type', boost: -1 }))
+				...unitNames.map((label) => ({ label, type: 'type', boost: -1 })),
+				...FUNCTIONS.map((f) => ({
+					label: f.name,
+					type: 'function',
+					detail: f.sig,
+					info: f.summary,
+					apply: applyFunction(f.name)
+				}))
 			];
 			return { from: w.from, options, validFor: /^[A-Za-z_]\w*$/ };
 		};
