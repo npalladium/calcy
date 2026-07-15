@@ -10,6 +10,11 @@ jobs:
   check:
     runs-on: ubuntu-latest
 
+    # No need to install the local git hooks (simple-git-hooks) in CI; this job
+    # runs the gate steps directly.
+    env:
+      SKIP_SIMPLE_GIT_HOOKS: 1
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4

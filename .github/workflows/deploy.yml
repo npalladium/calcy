@@ -25,6 +25,13 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    # Don't install the local git hooks (simple-git-hooks): the pre-push hook
+    # runs `pnpm knip`, which would fire during github-pages-deploy-action's
+    # push and fail — knip flags the built files in the action's temp deploy
+    # folder as unused, aborting the push. CI already ran the gate separately.
+    env:
+      SKIP_SIMPLE_GIT_HOOKS: 1
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
