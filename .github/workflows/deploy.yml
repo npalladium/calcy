@@ -1,0 +1,62 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - '.claude/**'
+      - '.gitignore'
+      - '.vscode/**'
+      - '.idea/**'
+  workflow_dispatch:
+
+# Allow the workflow to push the built site to the gh-pages branch.
+permissions:
+  contents: write
+
+# Never run two deploys at once; cancel an in-flight one if a newer push lands.
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `prebuild` regenerates the reference data, then adapter-static writes the
+      # SPA (index.html + 404.html fallback) to build/. The deploy base path
+      # (/calcy/) is baked into vite.config.ts, so no env var is needed here.
+      - name: Build
+        run: pnpm build
+
+      # GitHub Pages runs Jekyll by default, which drops directories starting
+      # with an underscore. .nojekyll disables that so all assets are served.
+      - name: Disable Jekyll
+        run: touch build/.nojekyll
+
+      - name: Deploy to gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build
+          branch: gh-pages
+          clean: true

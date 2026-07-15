@@ -16,29 +16,23 @@ pnpm check        # svelte-check (types)
 
 Run the full suite and lint/check before committing; only commit when green.
 
-## Publishing (manual — no GitHub Actions)
+## CI / Publishing (GitHub Actions)
 
-We can't use GitHub Actions (account billing), so the site is published with a
-local script that deploys to the `gh-pages` branch:
+Two workflows run in `.github/workflows/`:
 
-```sh
-pnpm run publish:site      # = bash scripts/publish.sh
-```
-
-How it works (mirrors ~/npalladium/blog's deploy):
-
-- Builds from a **detached worktree of HEAD**, so only committed files reach the
-  published site — untracked/WIP files (e.g. `docs/proposals/`) never leak.
-- Copies `build/` into a `gh-pages` worktree, adds `.nojekyll` (so GitHub Pages
-  serves the `_app/` directory), commits, and pushes `origin gh-pages`.
-- Creates the orphan `gh-pages` branch automatically on first run.
+- **`ci.yml`** — on every push to `main` and every PR, runs the same gate as the
+  local pre-push hook: `lint`, `lint:svelte`, `check`, `knip`, `test`.
+- **`deploy.yml`** — on push to `main`, builds the static site and deploys
+  `build/` to the `gh-pages` branch (via `JamesIves/github-pages-deploy-action`),
+  adding `.nojekyll` so GitHub Pages serves the `_app/` directory.
 
 GitHub Pages is configured to serve the **`gh-pages` branch, root**. The app uses
 relative asset paths (`paths: { relative: true }`) and a `404.html` SPA fallback,
 so it works at the project subpath (`/calcy/`) with no base-path config — and
 local dev still works at `/`.
 
-After a push to `main`, run `pnpm run publish:site` to update the live site.
+Deployment is automatic on push to `main`; `deploy.yml` can also be triggered
+manually from the Actions tab (`workflow_dispatch`).
 
 ## Conventions
 

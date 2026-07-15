@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Mirrors the local pre-push gate (simple-git-hooks) so CI enforces the
+      # same bar: format/lint, Svelte lint, type + a11y check, unused-code
+      # check, and the unit/property test suite.
+      - name: Lint (Biome)
+        run: pnpm lint
+
+      - name: Lint (Svelte / ESLint)
+        run: pnpm lint:svelte
+
+      - name: Type + a11y check
+        run: pnpm check
+
+      - name: Unused-code check (knip)
+        run: pnpm knip
+
+      - name: Test
+        run: pnpm test

@@ -10,7 +10,6 @@
 		"preview": "vite preview",
 		"gen:reference": "tsx scripts/gen-reference.ts",
 		"gen:og": "playwright test e2e/screenshots/og-card.spec.ts",
-		"publish:site": "bash scripts/publish.sh",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
 		"test": "vitest run",
 		"test:watch": "vitest",
