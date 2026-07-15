@@ -1,0 +1,7 @@
+# pnpm 11 reads build-script approvals from here. Without an explicit allowlist,
+# `pnpm install` aborts with ERR_PNPM_IGNORED_BUILDS in CI (non-interactive).
+# Both entries legitimately need their install scripts: esbuild fetches its
+# platform binary; simple-git-hooks installs the git hooks.
+allowBuilds:
+  esbuild: true
+  simple-git-hooks: true
