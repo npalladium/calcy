@@ -11,8 +11,34 @@
 // returns `null` and the caller falls back to the sample path.
 
 import { type DistFns, gamma } from './mc';
+import { correlation } from './stats';
 import { normalInverseCdf } from './stats-adapter';
 import type { Dimension, Value, ValueMeta } from './value';
+
+// Empirical correlation of two sample arrays, snapped to exactly 0 below a
+// noise floor. The floor 4/√n sits ≈4σ above the sampling scatter of genuinely
+// independent arrays (whose empirical correlation is ~1/√n), so an independent
+// construction snaps to 0 — keeping the exact analytic spread the closed-form
+// layer promises — while structural coupling (variable reuse, `correlate`)
+// clears the floor and is carried into the combined moment.
+function structuralCorr(a: Float64Array, b: Float64Array): number {
+  const r = correlation(a, b);
+  return Math.abs(r) < 4 / Math.sqrt(a.length) ? 0 : r;
+}
+
+// Structural correlation of the operands' logs — the coupling that drives a
+// lognormal product/ratio's spread (X = exp(A), so it is corr(A, B)). Samples
+// are positive by construction, so the log is finite.
+function structuralLogCorr(a: Float64Array, b: Float64Array): number {
+  const n = Math.min(a.length, b.length);
+  const la = new Float64Array(n);
+  const lb = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    la[i] = Math.log(a[i]);
+    lb[i] = Math.log(b[i]);
+  }
+  return structuralCorr(la, lb);
+}
 
 // Draw N samples from a closed-form distribution. Used to materialise a
 // `Value` that came out of `closedFormBinop` so that the display pipeline
@@ -272,14 +298,16 @@ export function analyticalPercentile(v: Value, q: number): number | null {
 // `meta` captures the closed-form result. Returns null when no closed form
 // applies — the engine then samples elementwise as today.
 
-// Normal ⊕ Normal combinations that preserve the family.
-// Independent normals X ~ N(μ₁,σ₁) and Y ~ N(μ₂,σ₂):
-//   X + Y  ~ N(μ₁+μ₂, √(σ₁²+σ₂²))
-//   X - Y  ~ N(μ₁-μ₂, √(σ₁²+σ₂²))
+// Normal ⊕ Normal combinations that preserve the family. For jointly-normal
+// X ~ N(μ₁,σ₁) and Y ~ N(μ₂,σ₂) with correlation ρ:
+//   X ± Y  ~ N(μ₁±μ₂, √(σ₁²+σ₂² ± 2ρσ₁σ₂))   (ρ from the paired samples)
 //   X · k  ~ N(k·μ₁, |k|·σ₁)        (k scalar)
 //   X + k  ~ N(μ₁+k, σ₁)             (k scalar)
 //   X - k  ~ N(μ₁-k, σ₁)
 //   X · Y  — not normal (closed form is messier); fall back to MC
+// The cross term makes x + x (ρ=1) yield sd 2σ and x − x yield 0, and carries
+// an imposed `correlate` coupling into the sum; independent operands snap ρ to
+// 0 (see structuralCorr) so the spread stays the exact independence value.
 export function normalOp(op: '+' | '-' | '*' | '/', a: Value, b: Value): Value | null {
   const ma = a.meta?.kind === 'normal' ? a.meta : null;
   const mb = b.meta?.kind === 'normal' ? b.meta : null;
@@ -287,8 +315,11 @@ export function normalOp(op: '+' | '-' | '*' | '/', a: Value, b: Value): Value |
   // X + Y / X - Y where both are normal: closed form (X - Y).
   if (ma && mb && (op === '+' || op === '-')) {
     const sign = op === '+' ? 1 : -1;
+    const rho = a.samples && b.samples ? structuralCorr(a.samples, b.samples) : 0;
     const newMean = ma.mean + sign * mb.mean;
-    const newSd = Math.sqrt(ma.sd * ma.sd + mb.sd * mb.sd);
+    const newSd = Math.sqrt(
+      Math.max(0, ma.sd * ma.sd + mb.sd * mb.sd + 2 * sign * rho * ma.sd * mb.sd)
+    );
     const dim: Dimension = op === '+' ? a.dim : { ...a.dim };
     // X - Y has the *same* dim as X (Y is subtracted, dim cancels).
     return { dim, meta: { kind: 'normal', mean: newMean, sd: newSd } };
@@ -319,20 +350,25 @@ export function normalOp(op: '+' | '-' | '*' | '/', a: Value, b: Value): Value |
   return null;
 }
 
-// Lognormal combinations that preserve the family.
-// Independent lognormals X = exp(A), Y = exp(B) with A, B normal:
-//   X · Y  ~ Lognormal(μ₁+μ₂, √(σ₁²+σ₂²))   (the operation that matters)
-//   X / Y  ~ Lognormal(μ₁-μ₂, √(σ₁²+σ₂²))
+// Lognormal combinations that preserve the family. For X = exp(A), Y = exp(B)
+// with A, B normal and correlation ρ (of the logs):
+//   X · Y  ~ Lognormal(μ₁+μ₂, √(σ₁²+σ₂² + 2ρσ₁σ₂))   (the operation that matters)
+//   X / Y  ~ Lognormal(μ₁-μ₂, √(σ₁²+σ₂² − 2ρσ₁σ₂))
 //   X · k  ~ Lognormal(μ + ln(k), σ)          (k > 0)
 //   X + k  — not lognormal; fall back to MC
+// The log-space cross term makes x / x (ρ=1) collapse to a point; independent
+// operands snap ρ to 0, keeping the exact independence spread.
 export function lognormalOp(op: '+' | '-' | '*' | '/', a: Value, b: Value): Value | null {
   const ma = a.meta?.kind === 'lognormal' ? a.meta : null;
   const mb = b.meta?.kind === 'lognormal' ? b.meta : null;
 
   if (ma && mb && (op === '*' || op === '/')) {
     const sign = op === '*' ? 1 : -1;
+    const rho = a.samples && b.samples ? structuralLogCorr(a.samples, b.samples) : 0;
     const newMu = ma.mu + sign * mb.mu;
-    const newSigma = Math.sqrt(ma.sigma * ma.sigma + mb.sigma * mb.sigma);
+    const newSigma = Math.sqrt(
+      Math.max(0, ma.sigma * ma.sigma + mb.sigma * mb.sigma + 2 * sign * rho * ma.sigma * mb.sigma)
+    );
     return {
       dim: a.dim,
       meta: { kind: 'lognormal', mu: newMu, sigma: newSigma }

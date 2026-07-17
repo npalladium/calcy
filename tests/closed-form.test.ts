@@ -19,7 +19,7 @@ const summ = (src: string, opts = STAT) => {
 };
 
 // Helper: take the *last* result line of a multi-line sheet.
-const _lastSumm = (src: string, opts = STAT) => {
+const lastSumm = (src: string, opts = STAT) => {
   const ls = values(src, opts);
   const last = ls[ls.length - 1];
   if (!last || last.error) throw new Error(`${src} → ${last?.error ?? 'no results'}`);
@@ -170,6 +170,33 @@ describe('analytical arithmetic — Phase 3', () => {
 
   it('mean() of normal + normal is exact', () => {
     expect(exact('mean(normal(100, 10) + normal(50, 5))', STAT)).toBe(150);
+  });
+
+  // The closed-form spread must reflect correlation-by-reuse, not the
+  // independence formula. x + x is 2x (sd 2σ), x − x is identically 0.
+  it('normal + normal respects correlation-by-reuse (x + x has sd 2σ)', () => {
+    const s = lastSumm('x = normal(0, 10)\nx + x', STAT);
+    if (s?.kind !== 'dist') throw new Error('expected dist');
+    expect(s.sd).toBeCloseTo(20, 0);
+  });
+
+  it('normal − normal respects correlation-by-reuse (x − x is 0)', () => {
+    const s = lastSumm('x = normal(100, 10)\nx - x', STAT);
+    if (s?.kind !== 'dist') throw new Error('expected dist');
+    expect(s.sd).toBeCloseTo(0, 6);
+  });
+
+  it('normal + normal reflects an imposed correlation in the sd', () => {
+    // t + correlate(t, N(0,10), 0.8): sd = √(100 + 100 + 2·0.8·100) = √360.
+    const s = lastSumm('t = normal(0, 10)\nt + correlate(t, normal(0, 10), 0.8)', STAT);
+    if (s?.kind !== 'dist') throw new Error('expected dist');
+    expect(s.sd).toBeCloseTo(Math.sqrt(360), 0);
+  });
+
+  it('lognormal / lognormal respects correlation-by-reuse (x / x has sd 0)', () => {
+    const s = lastSumm('x = 1 to 100\nx / x', STAT);
+    if (s?.kind !== 'dist') throw new Error('expected dist');
+    expect(s.sd).toBeCloseTo(0, 6);
   });
 
   it('lognormal · lognormal keeps lognormal shape; mean is exact', () => {
