@@ -156,6 +156,40 @@ export function analyticalMode(v: Value): number | null {
 	}
 }
 
+// --- analytical skewness (third standardized moment) ------------------------
+//
+// The Fisher–Pearson skewness γ₁ — positive = long upper tail (upside risk),
+// negative = long lower tail. Exact for families with a closed form; null for
+// the rest (weibull, triangular, pert), where the caller reads the sample
+// skewness instead.
+
+export function analyticalSkew(v: Value): number | null {
+	switch (v.meta?.kind) {
+		case 'normal':
+		case 'uniform':
+			return 0;
+		case 'exponential':
+			return 2;
+		case 'poisson':
+			return 1 / Math.sqrt(v.meta.lambda);
+		case 'lognormal': {
+			const e = Math.exp(v.meta.sigma * v.meta.sigma);
+			return (e + 2) * Math.sqrt(e - 1);
+		}
+		case 'binomial': {
+			const { n, p } = v.meta;
+			return (1 - 2 * p) / Math.sqrt(n * p * (1 - p));
+		}
+		case 'beta': {
+			const { a, b } = v.meta;
+			return (2 * (b - a) * Math.sqrt(a + b + 1)) / ((a + b + 2) * Math.sqrt(a * b));
+		}
+		default:
+			// weibull, triangular, pert — no simple closed form; sample it.
+			return null;
+	}
+}
+
 // --- analytical percentile (inverse CDF) ------------------------------------
 //
 // `p(d, q)` for known families. Returns null for distributions where the

@@ -517,6 +517,13 @@ export function reduceSd(s: Float64Array): number {
 	return Math.sqrt(v / s.length);
 }
 
+// Sample skewness (adjusted Fisher–Pearson G₁), the fallback for `skew(d)` on
+// families with no closed form. Returns 0 for a degenerate (zero-spread)
+// sample, matching summarize()'s guard. High-variance for small samples.
+export function reduceSkew(s: Float64Array): number {
+	return reduceSd(s) > 1e-12 ? sampleSkewness(s) : 0;
+}
+
 // Smoothed mode estimate: the centre of the fullest histogram bin — a coarse
 // but robust peak-finder for sample-only distributions (no parametric meta).
 // Uses the same binning as the display histogram, so what `mode()` reports lines

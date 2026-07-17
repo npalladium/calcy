@@ -5,6 +5,7 @@ import {
 	analyticalMean,
 	analyticalMode,
 	analyticalPercentile,
+	analyticalSkew,
 	closedFormBinop,
 	sampleFromMeta
 } from './closed-form';
@@ -23,6 +24,7 @@ import {
 	reduceMode,
 	reducePercentile,
 	reduceSd,
+	reduceSkew,
 	triangularSamples,
 	uniformSamples,
 	weibullSamples,
@@ -420,6 +422,12 @@ export const FUNCTIONS: FnDoc[] = [
 		sig: 'mode(d)',
 		summary:
 			'Most likely value (density peak); analytic for known families, else a smoothed estimate.'
+	},
+	{
+		name: 'skew',
+		category: 'Reducers',
+		sig: 'skew(d)',
+		summary: 'Asymmetry (Fisher–Pearson): positive = upside tail. Sample skew is high-variance.'
 	},
 	{
 		name: 'sd',
@@ -1039,6 +1047,18 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 			if (am != null && Number.isFinite(am))
 				return withHint({ dim: d.dim, scalar: am }, d.unitHint);
 			return withHint({ dim: d.dim, scalar: reduceMode(d.samples as Float64Array) }, d.unitHint);
+		}
+		// skew(d): the Fisher–Pearson skewness — upside (+) vs downside (−) tail.
+		// A pure number, so the result is dimensionless regardless of d's units.
+		// Analytic for known families; sample skewness otherwise (high-variance —
+		// flagged in the help text).
+		case 'skew': {
+			const d = ev(0);
+			if (d.list) throw new Error('skew() is for distributions — use mean() for a list');
+			if (d.scalar != null) return { dim: {}, scalar: 0 };
+			const as = analyticalSkew(d);
+			if (as != null && Number.isFinite(as)) return { dim: {}, scalar: as };
+			return { dim: {}, scalar: reduceSkew(d.samples as Float64Array) };
 		}
 		case 'sd':
 		case 'stdev': {
