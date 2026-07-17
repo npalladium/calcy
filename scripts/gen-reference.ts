@@ -13,12 +13,12 @@ const src = readFileSync(DOC, 'utf8');
 const start = src.indexOf(BEGIN_MARKER);
 const end = src.indexOf(END_MARKER);
 if (start === -1 || end === -1) {
-	throw new Error(`gen-reference: markers not found in ${DOC}`);
+  throw new Error(`gen-reference: markers not found in ${DOC}`);
 }
 const next = src.slice(0, start) + renderCatalogue() + src.slice(end + END_MARKER.length);
 if (next !== src) {
-	writeFileSync(DOC, next);
-	console.log('gen-reference: updated reference.md catalogue');
+  writeFileSync(DOC, next);
+  console.log('gen-reference: updated reference.md catalogue');
 } else {
-	console.log('gen-reference: catalogue already up to date');
+  console.log('gen-reference: catalogue already up to date');
 }

@@ -13,67 +13,67 @@ import { FUNCTIONS } from '../src/lib/engine/eval';
 const reference = readFileSync(new URL('../src/lib/docs/reference.md', import.meta.url), 'utf8');
 
 describe('Reference catalogue is generated and current', () => {
-	it('reference.md has the catalogue markers', () => {
-		expect(reference).toContain(BEGIN_MARKER);
-		expect(reference).toContain(END_MARKER);
-	});
+  it('reference.md has the catalogue markers', () => {
+    expect(reference).toContain(BEGIN_MARKER);
+    expect(reference).toContain(END_MARKER);
+  });
 
-	it('the committed catalogue matches a fresh render', () => {
-		const start = reference.indexOf(BEGIN_MARKER);
-		const end = reference.indexOf(END_MARKER);
-		const committed = reference.slice(start, end + END_MARKER.length);
-		expect(committed, 'reference.md catalogue is stale — run `pnpm gen:reference`').toBe(
-			renderCatalogue()
-		);
-	});
+  it('the committed catalogue matches a fresh render', () => {
+    const start = reference.indexOf(BEGIN_MARKER);
+    const end = reference.indexOf(END_MARKER);
+    const committed = reference.slice(start, end + END_MARKER.length);
+    expect(committed, 'reference.md catalogue is stale — run `pnpm gen:reference`').toBe(
+      renderCatalogue()
+    );
+  });
 });
 
 describe('FUNCTIONS catalogue covers exactly the user-callable functions', () => {
-	const evalSrc = readFileSync(new URL('../src/lib/engine/eval.ts', import.meta.url), 'utf8');
+  const evalSrc = readFileSync(new URL('../src/lib/engine/eval.ts', import.meta.url), 'utf8');
 
-	// Internal AST-node cases and operators handled by the same switch — these are
-	// not user-facing functions and so are intentionally absent from FUNCTIONS.
-	const INTERNAL = new Set([
-		'num',
-		'ident',
-		'call',
-		'neg',
-		'list',
-		'range',
-		'where',
-		'given',
-		'convert',
-		'scenario',
-		'str',
-		'bin',
-		'+',
-		'-',
-		'*',
-		'/',
-		'<',
-		'>',
-		'<=',
-		'>='
-	]);
+  // Internal AST-node cases and operators handled by the same switch — these are
+  // not user-facing functions and so are intentionally absent from FUNCTIONS.
+  const INTERNAL = new Set([
+    'num',
+    'ident',
+    'call',
+    'neg',
+    'list',
+    'range',
+    'where',
+    'given',
+    'convert',
+    'scenario',
+    'str',
+    'bin',
+    '+',
+    '-',
+    '*',
+    '/',
+    '<',
+    '>',
+    '<=',
+    '>='
+  ]);
 
-	// Every `case '...'` label in the file (the dispatch is one switch).
-	const caseLabels = new Set(
-		[...evalSrc.matchAll(/case '([^']+)':/g)].map((m) => m[1]).filter((n) => !INTERNAL.has(n))
-	);
-	// `bracket` and `pick` are dispatched before the switch (they read raw
-	// callArgs), so they have no `case` label — add them explicitly.
-	caseLabels.add('bracket');
-	caseLabels.add('pick');
+  // Every `case '...'` label in the file (the dispatch is one switch).
+  const caseLabels = new Set(
+    [...evalSrc.matchAll(/case '([^']+)':/g)].map((m) => m[1]).filter((n) => !INTERNAL.has(n))
+  );
+  // `bracket` and `pick` are dispatched before the switch (they read raw
+  // callArgs), so they have no `case` label — add them explicitly.
+  caseLabels.add('bracket');
+  caseLabels.add('pick');
 
-	const documented = new Set(FUNCTIONS.flatMap((f) => [f.name, ...(f.aliases ?? [])]));
+  const documented = new Set(FUNCTIONS.flatMap((f) => [f.name, ...(f.aliases ?? [])]));
 
-	it('no engine function is undocumented', () => {
-		const missing = [...caseLabels].filter((n) => !documented.has(n));
-		expect(missing, `add to FUNCTIONS in eval.ts: ${missing.join(', ')}`).toEqual([]);
-	});
+  it('no engine function is undocumented', () => {
+    const missing = [...caseLabels].filter((n) => !documented.has(n));
+    expect(missing, `add to FUNCTIONS in eval.ts: ${missing.join(', ')}`).toEqual([]);
+  });
 
-	it('no documented function is missing from the engine', () => {
-		const extra = [...documented].filter((n) => !caseLabels.has(n));
-		expect(extra, `not dispatched in evalCall: ${extra.join(', ')}`).toEqual([]);
-	});
+  it('no documented function is missing from the engine', () => {
+    const extra = [...documented].filter((n) => !caseLabels.has(n));
+    expect(extra, `not dispatched in evalCall: ${extra.join(', ')}`).toEqual([]);
+  });
 });
