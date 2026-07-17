@@ -86,7 +86,8 @@ export const KEYWORDS = new Set([
 	'given',
 	'every',
 	'where',
-	'via'
+	'via',
+	'over'
 ]);
 
 // Line-leading directives (matched in parseLine, not the expression grammar).
@@ -1026,10 +1027,10 @@ class Parser {
 	private parseCallArgs(): CallArg[] {
 		const args: CallArg[] = [];
 		if (this.peek()?.kind !== 'rparen') {
-			args.push(this.parseArg());
+			args.push(...this.parseArgWithOver());
 			while (this.peek()?.kind === 'comma') {
 				this.next();
-				args.push(this.parseArg());
+				args.push(...this.parseArgWithOver());
 			}
 		}
 		for (let i = 0; i < args.length; i++) {
@@ -1039,6 +1040,24 @@ class Parser {
 		}
 		this.expect('rparen');
 		return args;
+	}
+
+	// An argument, plus the prose reducer sugar `X over <axis>` which desugars
+	// to a trailing `over = <axis>` named argument (identical to the kwarg form).
+	// `over` is a keyword only here — a plain identifier everywhere else — so it
+	// never mis-parses as an implicit-product factor.
+	private parseArgWithOver(): CallArg[] {
+		const arg = this.parseArg();
+		const t = this.peek();
+		if (t?.kind === 'ident' && t.value === 'over') {
+			this.next();
+			const axis = this.peek();
+			if (axis?.kind !== 'ident')
+				throw new Error('over: expected an axis name, e.g. `min(x over case)`');
+			this.next();
+			return [arg, { name: 'over', value: { type: 'ident', name: axis.value } }];
+		}
+		return [arg];
 	}
 
 	private parseArg(): CallArg {

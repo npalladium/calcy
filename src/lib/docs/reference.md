@@ -333,6 +333,7 @@ Reserved words — don’t use them as variable names.
 | `every` | reserved for a future per-window operator (not yet bound) |
 | `where` | one-off locals for a line — `expr where a = 1, b = 2` |
 | `via` | pick a named bridge for a conversion — `in INR via fx` |
+| `over` | collapse a scenario axis in a reducer — `min(total over case)` |
 | `unit` | define your own unit — `unit sprint = 2 week` |
 | `currency` | mint a currency dimension — `currency BTC, bitcoin` |
 | `bridge` | name an exchange rate — `bridge fx = 83 ₹/$` |

@@ -126,3 +126,20 @@ export function selectAxes(
 	}
 	return { axes: kept, index };
 }
+
+// Collapse one axis for a reducer's `over <axis>`. Returns the surviving axes
+// and, for each surviving cell (row-major over them), the group of source-cell
+// indices that lie along the collapsed axis — the reducer folds each group.
+export function collapseAxis(axes: Axis[], axisName: string): { axes: Axis[]; groups: number[][] } {
+	const ax = axes.find((a) => a.name === axisName);
+	if (!ax)
+		throw new Error(`over: no axis '${axisName}' (have ${axes.map((a) => a.name).join(', ')})`);
+	// For each coord of the collapsed axis, the sub-grid indices over the
+	// surviving axes. Transpose so group r lists one index per collapsed coord.
+	const perCoord = ax.coords.map((c) => selectAxes(axes, new Map([[axisName, c]])).index);
+	const kept = axes.filter((a) => a.name !== axisName);
+	const total = perCoord[0].length;
+	const groups = new Array<number[]>(total);
+	for (let r = 0; r < total; r++) groups[r] = perCoord.map((idxs) => idxs[r]);
+	return { axes: kept, groups };
+}

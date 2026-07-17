@@ -1,7 +1,7 @@
 // AST evaluator: walks nodes to Values, with the scalar fast path and lazy
 // broadcast to samples only when a value meets a distribution.
 
-import { resolveAxes, selectAxes } from './axis';
+import { collapseAxis, resolveAxes, selectAxes } from './axis';
 import {
 	analyticalMean,
 	analyticalMode,
@@ -722,6 +722,69 @@ function evalPick(callArgs: CallArg[], ctx: EvalCtx): Value {
 	return axes.length === 0 ? cells[0] : makeGrid(axes, cells);
 }
 
+// Reducers that can collapse a scenario axis with `over <axis>`. These fold
+// element-wise across the axis's cells (per-draw for distributions), so they
+// have a natural definition; other reducers (median, sd, p, …) do not.
+const OVER_REDUCERS = new Set(['min', 'max', 'mean', 'sum']);
+
+// Fold a scenario axis's cells with the named reducer. Cells share one dim/hint
+// (they are coords of one value), so we reduce pairwise via binop; distributions
+// fold per-draw, preserving correlation-by-reuse.
+function foldOver(name: string, members: Value[], ctx: EvalCtx): Value {
+	const n = ctx.fns.N;
+	const dim = members[0].dim;
+	const hint = members[0].unitHint;
+	const fold = (fn: (x: number, y: number) => number) =>
+		withHint(
+			members.reduce((acc, m) => binop(acc, m, fn, dim, n)),
+			hint
+		);
+	switch (name) {
+		case 'min':
+			return fold((x, y) => Math.min(x, y));
+		case 'max':
+			return fold((x, y) => Math.max(x, y));
+		case 'sum':
+			return fold((x, y) => x + y);
+		default: {
+			// mean = sum / count
+			const total = fold((x, y) => x + y);
+			return withHint(
+				unaryMap(total, (x) => x / members.length, dim),
+				hint
+			);
+		}
+	}
+}
+
+// `min(x over case)` etc. — collapse one scenario axis. Omitting `over` reduces
+// the sample axis (the ordinary reducer path); this is the axis path.
+function evalReduceOver(name: string, callArgs: CallArg[], overArg: CallArg, ctx: EvalCtx): Value {
+	if (!OVER_REDUCERS.has(name))
+		throw new Error(
+			`${name}() has no 'over <axis>' form — only min, max, mean, sum collapse an axis`
+		);
+	if (overArg.value?.type !== 'ident')
+		throw new Error('over: expected an axis name, e.g. `min(x over case)`');
+	const axisName = overArg.value.name;
+	const positional = callArgs.filter((a) => a.name == null && a.weight == null);
+	if (positional.length !== 1)
+		throw new Error(`${name}(x over ${axisName}) takes exactly one scenario value`);
+	const v = evalNode(positional[0].value as Node, ctx);
+	if (!v.axes) throw new Error(`${name} over ${axisName}: the value has no axes to collapse`);
+	const { axes, groups } = collapseAxis(v.axes, axisName);
+	const cells = v.cells as Value[];
+	const reduced = groups.map((g) =>
+		foldOver(
+			name,
+			g.map((i) => cells[i]),
+			ctx
+		)
+	);
+	// A last surviving axis collapses to a plain value; otherwise a smaller grid.
+	return axes.length === 0 ? reduced[0] : makeGrid(axes, reduced);
+}
+
 function evalBracket(callArgs: CallArg[], ctx: EvalCtx): Value {
 	if (callArgs.some((a) => a.name != null && a.name !== 'total'))
 		throw new Error("bracket: only 'total' is a named argument");
@@ -828,6 +891,11 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 	// pick reads its axis selectors by name (`case = "base"`) with quoted-string
 	// coords, so it bypasses the fixed-parameter binder like bracket does.
 	if (name === 'pick') return evalPick(callArgs, ctx);
+	// `min(total over case)` / `min(total, over = case)` — collapse a scenario
+	// axis instead of the sample axis. Intercepted before bindNamed, which has no
+	// parameter named `over`.
+	const overArg = callArgs.find((a) => a.name === 'over');
+	if (overArg) return evalReduceOver(name, callArgs, overArg, ctx);
 	const args: Node[] = hasNamed ? bindNamed(name, callArgs) : callArgs.map((a) => a.value as Node);
 	const ev = (i: number) => {
 		// Guard the unary/reducer cases that read ev(0) without an explicit arity

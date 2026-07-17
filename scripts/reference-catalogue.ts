@@ -32,7 +32,8 @@ const KEYWORD_DOCS: Record<string, string> = {
 	given: 'condition a distribution — `d given pred`; `beta given k of n`',
 	every: 'reserved for a future per-window operator (not yet bound)',
 	where: 'one-off locals for a line — `expr where a = 1, b = 2`',
-	via: 'pick a named bridge for a conversion — `in INR via fx`'
+	via: 'pick a named bridge for a conversion — `in INR via fx`',
+	over: 'collapse a scenario axis in a reducer — `min(total over case)`'
 };
 
 const DIRECTIVE_DOCS: Record<string, string> = {

@@ -160,3 +160,43 @@ describe('pick(scenario, axis = "coord")', () => {
 		expect(values('"base" + 1')[0].error).toMatch(/quoted string/);
 	});
 });
+
+describe('reducers with over <axis>', () => {
+	it('collapses a single axis by min / max / mean / sum', () => {
+		expect(num('min(scenario[case](low: 8, base: 10, high: 14) over case)')).toBe(8);
+		expect(num('max(scenario[case](low: 8, base: 10, high: 14) over case)')).toBe(14);
+		expect(num('mean(scenario[case](low: 8, base: 10, high: 12) over case)')).toBe(10);
+		expect(num('sum(scenario[case](low: 8, base: 10, high: 12) over case)')).toBe(30);
+	});
+
+	it('accepts the kwarg spelling over = axis', () => {
+		expect(num('max(scenario[case](low: 8, high: 14), over = case)')).toBe(14);
+	});
+
+	it('preserves the shared unit through the collapse', () => {
+		const l = one('sum(scenario[case](low: 8 $, high: 14 $) over case)');
+		expect(l.summary?.kind).toBe('point');
+		expect(l.display?.unit).toBe('$');
+		expect(Number(l.display?.value)).toBe(22);
+	});
+
+	it('does a partial collapse, keeping the other axis', () => {
+		const s = one('max(scenario[case](low: 1, high: 2) * scenario[geo](us: 10, eu: 20) over case)');
+		if (s.summary?.kind !== 'scenario') throw new Error('expected scenario');
+		expect(s.summary.axes.map((a) => a.name)).toEqual(['geo']);
+		expect(s.summary.cells.map((c) => (c.kind === 'point' ? c.value : Number.NaN))).toEqual([
+			20, 40
+		]);
+	});
+
+	it('rejects over on a reducer that has no axis form', () => {
+		expect(values('median(scenario[case](low: 8, high: 14) over case)')[0].error).toMatch(
+			/no 'over <axis>' form/
+		);
+	});
+
+	it('rejects over on an unknown axis or a non-scenario', () => {
+		expect(values('min(scenario[case](low: 8) over geo)')[0].error).toMatch(/no axis 'geo'/);
+		expect(values('min(42 over case)')[0].error).toMatch(/no axes to collapse/);
+	});
+});
