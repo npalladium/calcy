@@ -363,6 +363,7 @@ Reserved words — don’t use them as variable names.
 |---|---|
 | `mean(d)` | Average of a distribution (exact for known families). |
 | `median(d)` | Middle value (50th percentile). |
+| `mode(d)` | Most likely value (density peak); analytic for known families, else a smoothed estimate. |
 | `sd(d)` _(alias: `stdev`)_ | Standard deviation. |
 | `p(d, q)` _(alias: `percentile`)_ | The q-quantile, q in 0…1. |
 | `min(d) / min(list)` | Smallest value. |

@@ -119,6 +119,43 @@ export function analyticalMean(v: Value): number | null {
 	}
 }
 
+// --- analytical mode (the density peak) -------------------------------------
+//
+// The value at which the pdf is maximised, exact for families that have a
+// closed-form mode. Returns null when there's no analytic mode (uniform is
+// flat; poisson/beta/exponential are left to the sample estimate), and the
+// caller falls back to a smoothed histogram peak.
+
+export function analyticalMode(v: Value): number | null {
+	switch (v.meta?.kind) {
+		case 'normal':
+			return v.meta.mean;
+		case 'lognormal':
+			// exp(μ − σ²): strictly below the median exp(μ), the honest "most likely".
+			return Math.exp(v.meta.mu - v.meta.sigma * v.meta.sigma);
+		case 'triangular':
+			return v.meta.mode;
+		case 'pert': {
+			// Recover the most-likely m from α: α = 1 + 4(m − lo)/(hi − lo).
+			const span = v.meta.hi - v.meta.lo;
+			return v.meta.lo + ((v.meta.alpha - 1) * span) / 4;
+		}
+		case 'binomial':
+			// The largest integer ≤ (n+1)p (two adjacent modes when (n+1)p is an
+			// integer; we report the lower, matching ⌊(n+1)p⌋).
+			return Math.floor((v.meta.n + 1) * v.meta.p);
+		case 'weibull':
+			// λ·((k−1)/k)^(1/k) for k > 1; the density peaks at 0 for k ≤ 1.
+			return v.meta.shape > 1
+				? v.meta.scale * ((v.meta.shape - 1) / v.meta.shape) ** (1 / v.meta.shape)
+				: 0;
+		default:
+			// uniform (flat), exponential (peaks at 0 but left to the sample path),
+			// poisson, beta — no analytic mode reported here.
+			return null;
+	}
+}
+
 // --- analytical percentile (inverse CDF) ------------------------------------
 //
 // `p(d, q)` for known families. Returns null for distributions where the

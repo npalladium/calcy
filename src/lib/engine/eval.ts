@@ -3,6 +3,7 @@
 
 import {
 	analyticalMean,
+	analyticalMode,
 	analyticalPercentile,
 	closedFormBinop,
 	sampleFromMeta
@@ -19,6 +20,7 @@ import {
 	pertSamples,
 	poissonSamples,
 	reduceMean,
+	reduceMode,
 	reducePercentile,
 	reduceSd,
 	triangularSamples,
@@ -411,6 +413,13 @@ export const FUNCTIONS: FnDoc[] = [
 		category: 'Reducers',
 		sig: 'median(d)',
 		summary: 'Middle value (50th percentile).'
+	},
+	{
+		name: 'mode',
+		category: 'Reducers',
+		sig: 'mode(d)',
+		summary:
+			'Most likely value (density peak); analytic for known families, else a smoothed estimate.'
 	},
 	{
 		name: 'sd',
@@ -1017,6 +1026,19 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 				{ dim: d.dim, scalar: d.scalar ?? reducePercentile(d.samples as Float64Array, 0.5) },
 				d.unitHint
 			);
+		}
+		// mode(d): the density peak — the honest "most likely" the mean/median
+		// hide for skewed families. Analytic when the distribution carries a
+		// parametric identity (lognormal, normal, binomial, weibull, tri/pert);
+		// otherwise a smoothed histogram-peak estimate.
+		case 'mode': {
+			const d = ev(0);
+			if (d.list) throw new Error('mode() is for distributions — use mean() for a list');
+			if (d.scalar != null) return withHint({ dim: d.dim, scalar: d.scalar }, d.unitHint);
+			const am = analyticalMode(d);
+			if (am != null && Number.isFinite(am))
+				return withHint({ dim: d.dim, scalar: am }, d.unitHint);
+			return withHint({ dim: d.dim, scalar: reduceMode(d.samples as Float64Array) }, d.unitHint);
 		}
 		case 'sd':
 		case 'stdev': {

@@ -516,3 +516,17 @@ export function reduceSd(s: Float64Array): number {
 	for (let i = 0; i < s.length; i++) v += (s[i] - m) ** 2;
 	return Math.sqrt(v / s.length);
 }
+
+// Smoothed mode estimate: the centre of the fullest histogram bin — a coarse
+// but robust peak-finder for sample-only distributions (no parametric meta).
+// Uses the same binning as the display histogram, so what `mode()` reports lines
+// up with where the sparkline peaks.
+export function reduceMode(s: Float64Array): number {
+	const sorted = Float64Array.from(s).sort();
+	const { hist, min, max } = histogram(sorted);
+	if (max === min) return min;
+	let best = 0;
+	for (let b = 1; b < hist.length; b++) if (hist[b] > hist[best]) best = b;
+	const width = (max - min) / hist.length;
+	return min + (best + 0.5) * width;
+}
