@@ -44,6 +44,7 @@ const DIRECTIVE_DOCS: Record<string, string> = {
 const FN_CATEGORY_ORDER: FnDoc['category'][] = [
 	'Distributions',
 	'Reducers',
+	'Scenarios',
 	'Math',
 	'Trigonometry',
 	'Inference',

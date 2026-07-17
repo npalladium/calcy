@@ -373,6 +373,12 @@ Reserved words — don’t use them as variable names.
 | `sum(list) / sum(above)` | Total of a list, or of preceding result lines. |
 | `chance(pred)` | Probability a predicate holds (mean of a 0/1 mask). |
 
+**Scenarios**
+
+| Call | What it does |
+|---|---|
+| `pick(scenario, axis = "coord")` | Select one coord of a scenario axis; a partial pick keeps the remaining axes. |
+
 **Math**
 
 | Call | What it does |

@@ -44,7 +44,10 @@ export type Node =
 	// constructor: a value carrying one named axis whose coords are labelled
 	// expressions. Shorthand for a one-row scenario table. See
 	// docs/plans/scenarios.md.
-	| { type: 'scenario'; axis: string; coords: { label: string; value: Node }[] };
+	| { type: 'scenario'; axis: string; coords: { label: string; value: Node }[] }
+	// A double-quoted string literal. Only valid as a `pick(...)` coord label;
+	// the evaluator errors if one appears anywhere a value is expected.
+	| { type: 'str'; value: string };
 
 export type Line =
 	| { type: 'blank' }
@@ -59,7 +62,7 @@ export type Line =
 	| { type: 'currencydef'; names: string[]; comment?: string };
 
 interface Tok {
-	kind: 'num' | 'ident' | 'op' | 'lparen' | 'rparen' | 'comma' | 'eq' | 'lbrack' | 'rbrack';
+	kind: 'num' | 'ident' | 'op' | 'lparen' | 'rparen' | 'comma' | 'eq' | 'lbrack' | 'rbrack' | 'str';
 	value: string;
 	num?: number;
 	start: number;
@@ -390,6 +393,22 @@ function tokenize(src: string): Tok[] {
 				i++;
 			}
 			toks.push({ kind: 'ident', value: s, start, end: i });
+			continue;
+		}
+		// Double-quoted string literal. Only meaningful as a `pick(...)` coord
+		// label (a bare identifier there would be ambiguous with a variable), so
+		// the grammar accepts it narrowly and the evaluator rejects it elsewhere.
+		// No escapes — coord labels are plain words.
+		if (c === '"') {
+			let j = i + 1;
+			let s = '';
+			while (j < src.length && src[j] !== '"') {
+				s += src[j];
+				j++;
+			}
+			if (j >= src.length) throw new Error('unterminated string literal — missing closing "');
+			toks.push({ kind: 'str', value: s, start, end: j + 1 });
+			i = j + 1;
 			continue;
 		}
 		if (c === '(') {
@@ -883,6 +902,10 @@ class Parser {
 	private parsePrimary(): Node {
 		const t = this.peek();
 		if (!t) throw new Error('unexpected end of expression');
+		if (t.kind === 'str') {
+			this.next();
+			return { type: 'str', value: t.value };
+		}
 		if (t.kind === 'num') {
 			this.next();
 			if (Number.isNaN(t.num)) throw new Error(`invalid number '${t.value}'`);

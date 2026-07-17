@@ -1,7 +1,7 @@
 // AST evaluator: walks nodes to Values, with the scalar fast path and lazy
 // broadcast to samples only when a value meets a distribution.
 
-import { resolveAxes } from './axis';
+import { resolveAxes, selectAxes } from './axis';
 import {
 	analyticalMean,
 	analyticalMode,
@@ -378,7 +378,14 @@ const PARAMS: Record<string, string[][]> = {
 export interface FnDoc {
 	name: string;
 	aliases?: string[];
-	category: 'Distributions' | 'Reducers' | 'Math' | 'Trigonometry' | 'Inference' | 'Tiered';
+	category:
+		| 'Distributions'
+		| 'Reducers'
+		| 'Scenarios'
+		| 'Math'
+		| 'Trigonometry'
+		| 'Inference'
+		| 'Tiered';
 	sig: string;
 	summary: string;
 }
@@ -521,6 +528,13 @@ export const FUNCTIONS: FnDoc[] = [
 		category: 'Reducers',
 		sig: 'chance(pred)',
 		summary: 'Probability a predicate holds (mean of a 0/1 mask).'
+	},
+	// Scenarios
+	{
+		name: 'pick',
+		category: 'Scenarios',
+		sig: 'pick(scenario, axis = "coord")',
+		summary: 'Select one coord of a scenario axis; a partial pick keeps the remaining axes.'
 	},
 	// Math
 	{ name: 'sqrt', category: 'Math', sig: 'sqrt(x)', summary: 'Square root.' },
@@ -680,6 +694,34 @@ function weightedMixture(callArgs: CallArg[], ctx: EvalCtx, label: string): Valu
 // units with `x`; rates may carry any units (typically dimensionless for tax,
 // `currency/x` for tiered pricing). All rates must share the same dimension.
 // Elementwise on a distribution.
+// pick(scenario, axis = "coord", …) — select one coord on each named axis. A
+// full selection collapses to the chosen cell (a plain value); a partial
+// selection returns a smaller grid over the axes left unspecified.
+function evalPick(callArgs: CallArg[], ctx: EvalCtx): Value {
+	const positional = callArgs.filter((a) => a.name == null && a.weight == null);
+	const selectors = callArgs.filter((a) => a.name != null);
+	if (callArgs.some((a) => a.weight != null))
+		throw new Error('pick(scenario, axis = "coord") — no weight: pairs');
+	if (positional.length !== 1)
+		throw new Error('pick(scenario, axis = "coord") — one scenario, then axis selectors');
+	if (selectors.length === 0)
+		throw new Error('pick needs at least one selector, e.g. pick(x, case = "base")');
+	const v = evalNode(positional[0].value as Node, ctx);
+	if (!v.axes) throw new Error('pick expects a scenario value (one with named axes)');
+	const sel = new Map<string, string>();
+	for (const s of selectors) {
+		const label = s.value;
+		if (label?.type !== 'str')
+			throw new Error(`pick: coord for axis '${s.name}' must be quoted, e.g. ${s.name} = "base"`);
+		if (sel.has(s.name as string)) throw new Error(`pick: axis '${s.name}' selected twice`);
+		sel.set(s.name as string, label.value);
+	}
+	const { axes, index } = selectAxes(v.axes, sel);
+	const cells = index.map((i) => (v.cells as Value[])[i]);
+	// Fully specified → the single cell itself (a plain value, hint intact).
+	return axes.length === 0 ? cells[0] : makeGrid(axes, cells);
+}
+
 function evalBracket(callArgs: CallArg[], ctx: EvalCtx): Value {
 	if (callArgs.some((a) => a.name != null && a.name !== 'total'))
 		throw new Error("bracket: only 'total' is a named argument");
@@ -783,6 +825,9 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 	// bracket reads callArgs directly (it uses `weight: value` pairs, not a
 	// flat positional list), so it bypasses the named-arg binder entirely.
 	if (name === 'bracket') return evalBracket(callArgs, ctx);
+	// pick reads its axis selectors by name (`case = "base"`) with quoted-string
+	// coords, so it bypasses the fixed-parameter binder like bracket does.
+	if (name === 'pick') return evalPick(callArgs, ctx);
 	const args: Node[] = hasNamed ? bindNamed(name, callArgs) : callArgs.map((a) => a.value as Node);
 	const ev = (i: number) => {
 		// Guard the unary/reducer cases that read ev(0) without an explicit arity
@@ -1352,6 +1397,8 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 				throw new Error("'above' is only valid as an argument to sum(...)");
 			throw new Error(`unknown identifier '${node.name}'`);
 		}
+		case 'str':
+			throw new Error('a quoted string ("…") is only valid as a pick(…) coordinate');
 		case 'call':
 			return evalCall(node, ctx);
 		case 'neg': {

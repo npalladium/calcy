@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ScenarioSummary } from '../src/lib/engine/mc';
-import { one, values } from './helpers';
+import { num, one, values } from './helpers';
 
 // scenario[axis](label: expr, …) — the inline constructor. A value gains one
 // named axis whose coords are labelled expressions; each coord holds a full
@@ -117,5 +117,46 @@ describe('scenario arithmetic (align / broadcast / cross)', () => {
 			Array.from({ length: 17 }, (_, i) => `${prefix}${i}: 1`).join(', ');
 		const src = `scenario[a](${coords('a')}) * scenario[b](${coords('b')})`; // 17 × 17 = 289
 		expect(values(src)[0].error).toMatch(/too large: 289 cells/);
+	});
+});
+
+describe('pick(scenario, axis = "coord")', () => {
+	it('selects one coord, collapsing a single-axis grid to a plain value', () => {
+		expect(num('pick(scenario[case](low: 8, base: 10, high: 14), case = "base")')).toBe(10);
+	});
+
+	it('works against a named scenario over two lines', () => {
+		const [, picked] = values('t = scenario[plan](basic: 5 $, pro: 20 $)\npick(t, plan = "pro")');
+		expect(picked.summary?.kind).toBe('point');
+		expect(Number(picked.display?.value)).toBe(20);
+	});
+
+	it('does a partial pick, keeping the unspecified axis', () => {
+		const s = one(
+			'pick(scenario[case](low: 1, high: 2) * scenario[geo](us: 10, eu: 20), case = "high")'
+		);
+		if (s.summary?.kind !== 'scenario') throw new Error('expected scenario');
+		expect(s.summary.axes.map((a) => a.name)).toEqual(['geo']);
+		// high row of the cross: (high,us)=20, (high,eu)=40
+		expect(s.summary.cells.map((c) => (c.kind === 'point' ? c.value : Number.NaN))).toEqual([
+			20, 40
+		]);
+	});
+
+	it('rejects a bare (unquoted) coord with a hint to quote it', () => {
+		expect(values('pick(scenario[case](low: 8), case = base)')[0].error).toMatch(/must be quoted/);
+	});
+
+	it('rejects an unknown axis or coord', () => {
+		expect(values('pick(scenario[case](low: 8), geo = "us")')[0].error).toMatch(/no axis 'geo'/);
+		expect(values('pick(scenario[case](low: 8), case = "mid")')[0].error).toMatch(/no coord 'mid'/);
+	});
+
+	it('rejects a non-scenario input', () => {
+		expect(values('pick(42, case = "low")')[0].error).toMatch(/expects a scenario/);
+	});
+
+	it('rejects a quoted string used as an ordinary value', () => {
+		expect(values('"base" + 1')[0].error).toMatch(/quoted string/);
 	});
 });

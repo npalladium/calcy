@@ -51,5 +51,7 @@ export function astText(node: Node): string {
 			const coords = node.coords.map((c) => `${c.label}: ${astText(c.value)}`).join(' ');
 			return `(scenario[${node.axis}] ${coords})`;
 		}
+		case 'str':
+			return JSON.stringify(node.value);
 	}
 }

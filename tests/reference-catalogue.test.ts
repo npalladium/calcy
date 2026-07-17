@@ -44,6 +44,7 @@ describe('FUNCTIONS catalogue covers exactly the user-callable functions', () =>
 		'given',
 		'convert',
 		'scenario',
+		'str',
 		'bin',
 		'+',
 		'-',
@@ -59,9 +60,10 @@ describe('FUNCTIONS catalogue covers exactly the user-callable functions', () =>
 	const caseLabels = new Set(
 		[...evalSrc.matchAll(/case '([^']+)':/g)].map((m) => m[1]).filter((n) => !INTERNAL.has(n))
 	);
-	// `bracket` is dispatched before the switch (it reads weight:value pairs), so
-	// add it explicitly.
+	// `bracket` and `pick` are dispatched before the switch (they read raw
+	// callArgs), so they have no `case` label — add them explicitly.
 	caseLabels.add('bracket');
+	caseLabels.add('pick');
 
 	const documented = new Set(FUNCTIONS.flatMap((f) => [f.name, ...(f.aliases ?? [])]));
 

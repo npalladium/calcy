@@ -89,3 +89,40 @@ export function resolveAxes(aAxes: Axis[], bAxes: Axis[]): ResolvedAxes {
 	}
 	return { axes, leftIndex, rightIndex };
 }
+
+// Select one coord on each named axis (pick). Returns the axes that survive
+// (those not selected) and, for each surviving cell (row-major over them), the
+// flat source-cell index. A full selection leaves no axes and one index.
+export function selectAxes(
+	axes: Axis[],
+	sel: Map<string, string>
+): { axes: Axis[]; index: number[] } {
+	for (const [name, coord] of sel) {
+		const ax = axes.find((a) => a.name === name);
+		if (!ax)
+			throw new Error(`pick: no axis '${name}' (have ${axes.map((a) => a.name).join(', ')})`);
+		if (!ax.coords.includes(coord))
+			throw new Error(
+				`pick: axis '${name}' has no coord '${coord}' (have ${ax.coords.join(', ')})`
+			);
+	}
+	const srcStrides = strides(axes.map((a) => a.coords.length));
+	// Fixed offset contributed by the selected axes.
+	let base = 0;
+	axes.forEach((a, d) => {
+		const coord = sel.get(a.name);
+		if (coord !== undefined) base += a.coords.indexOf(coord) * srcStrides[d];
+	});
+	const kept = axes.filter((a) => !sel.has(a.name));
+	const keptSizes = kept.map((a) => a.coords.length);
+	const keptSrcStride = kept.map((k) => srcStrides[axes.findIndex((a) => a.name === k.name)]);
+	const total = keptSizes.reduce((n, s) => n * s, 1);
+	const index = new Array<number>(total);
+	for (let r = 0; r < total; r++) {
+		const coord = decode(r, keptSizes);
+		let idx = base;
+		for (let d = 0; d < kept.length; d++) idx += coord[d] * keptSrcStride[d];
+		index[r] = idx;
+	}
+	return { axes: kept, index };
+}
