@@ -239,6 +239,23 @@ export function weibullSamples(shape: number, scale: number, fns: DistFns): Floa
 	return out;
 }
 
+// Binomial(n trials, success prob p): number of successes — the bounded
+// counterpart to poisson (poisson can exceed n; this can't). Sum of n Bernoulli
+// draws: O(n) per sample, fine at n ≈ 100, N = 10k. Large-n fast paths (BTPE /
+// normal approx) are deliberately deferred. Assumes independent trials.
+export function binomialSamples(n: number, p: number, fns: DistFns): Float64Array {
+	if (!Number.isInteger(n) || n < 0)
+		throw new Error('binomial requires a non-negative integer number of trials');
+	if (!(p >= 0 && p <= 1)) throw new Error('binomial requires p in [0, 1]');
+	const out = new Float64Array(fns.N);
+	for (let i = 0; i < fns.N; i++) {
+		let k = 0;
+		for (let j = 0; j < n; j++) if (fns.uniform() < p) k++;
+		out[i] = k;
+	}
+	return out;
+}
+
 function gammaDraw(k: number, fns: DistFns): number {
 	if (k < 1) {
 		const u = fns.uniform();
@@ -441,6 +458,11 @@ export function summarize(v: Value, level = 0.9): Summary {
 				sd = v.meta.scale * Math.sqrt(g2 - g1 * g1);
 				break;
 			}
+			case 'binomial':
+				// mean = n·p; var = n·p·(1 − p).
+				mean = v.meta.n * v.meta.p;
+				sd = Math.sqrt(v.meta.n * v.meta.p * (1 - v.meta.p));
+				break;
 		}
 	}
 	const p50 = quantileSorted(sorted, 0.5);

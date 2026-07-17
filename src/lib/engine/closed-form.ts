@@ -112,6 +112,8 @@ export function analyticalMean(v: Value): number | null {
 		case 'weibull':
 			// E[X] = λ·Γ(1 + 1/k).
 			return v.meta.scale * gamma(1 + 1 / v.meta.shape);
+		case 'binomial':
+			return v.meta.n * v.meta.p;
 		default:
 			return null;
 	}

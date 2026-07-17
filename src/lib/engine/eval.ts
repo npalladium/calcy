@@ -9,6 +9,7 @@ import {
 } from './closed-form';
 import {
 	betaSamples,
+	binomialSamples,
 	ciSamples,
 	type DistFns,
 	exponentialSamples,
@@ -281,6 +282,7 @@ const PARAMS: Record<string, string[][]> = {
 		['shape', 'k'],
 		['scale', 'lambda']
 	],
+	binomial: [['trials', 'n'], ['p']],
 	p: [
 		['dist', 'd'],
 		['q', 'p']
@@ -372,6 +374,12 @@ export const FUNCTIONS: FnDoc[] = [
 		category: 'Distributions',
 		sig: 'weibull(shape, scale)',
 		summary: 'Time-to-failure / reliability; scale carries the units, shape is dimensionless.'
+	},
+	{
+		name: 'binomial',
+		category: 'Distributions',
+		sig: 'binomial(trials, p)',
+		summary: 'Whole count of successes in n independent trials (bounded by n).'
 	},
 	{
 		name: 'discrete',
@@ -868,6 +876,26 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 				dim: scale.dim,
 				samples: weibullSamples(shapeV, scaleV, ctx.fns),
 				meta: { kind: 'weibull', shape: shapeV, scale: scaleV }
+			};
+		}
+		// binomial(trials, p): whole count of successes in n independent trials —
+		// the bounded counterpart to poisson (which is unbounded). trials carries
+		// the count unit (binomial(100 server, …) → server); p is dimensionless in
+		// [0, 1]. Non-integer trials is a hard error, never silently rounded.
+		case 'binomial': {
+			if (args.length !== 2) throw new Error('binomial(trials, p) — e.g. binomial(100, 0.02)');
+			const trials = ev(0);
+			const p = ev(1);
+			requireDimless(p, 'binomial p');
+			const nV = scalarParam(trials, 'trials');
+			const pV = scalarParam(p, 'p');
+			if (!Number.isInteger(nV) || nV < 0)
+				throw new Error('binomial: trials must be a non-negative integer');
+			if (!(pV >= 0 && pV <= 1)) throw new Error('binomial: p must be between 0 and 1');
+			return {
+				dim: trials.dim,
+				samples: binomialSamples(nV, pV, ctx.fns),
+				meta: { kind: 'binomial', n: nV, p: pV }
 			};
 		}
 		// discrete: pick value vᵢ with probability ∝ wᵢ — weighted scenario /

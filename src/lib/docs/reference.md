@@ -352,6 +352,7 @@ Reserved words — don’t use them as variable names.
 | `exponential(mean)` | Wait time between events; carries the mean’s units. |
 | `poisson(mean)` | Whole count of events at the given mean rate. |
 | `weibull(shape, scale)` | Time-to-failure / reliability; scale carries the units, shape is dimensionless. |
+| `binomial(trials, p)` | Whole count of successes in n independent trials (bounded by n). |
 | `discrete(w1: v1, w2: v2, …)` | Weighted scenarios (or equal-weight from a list). |
 | `mixture(d1, d2, …)` | Equal-weight (or weighted) mix of like-dimensioned distributions. |
 | `ci(lo, hi[, level])` | Confidence interval as a function — the `lo to hi` form, with an optional level. |
