@@ -103,6 +103,25 @@ The last number (−1 to 1) is how tightly they move: `0.6` together, `-0.6`
 apart, `0` not at all. Each keeps its own shape—only the pairing between them
 changes.
 
+When more than two things move together, group them in a `correlate:` block:
+define each one on its own indented line, then name the pairs that are linked.
+Anything you don't mention stays independent.
+
+```
+correlate:
+  traffic    = pert(10k, 50k, 100k) req
+  conversion = normal(0.02, 0.005)
+  spend      = 100 to 300 $
+
+  cor(traffic, conversion) = 0.5
+  cor(traffic, spend)      = -0.3
+revenue = traffic * conversion * spend
+```
+
+Every variable still keeps its own shape; only the pairing between them changes.
+Because the block defines them together, a linked variable never slips into the
+rest of your sheet in an uncoupled form.
+
 ### Rates over time
 
 A value measured *per unit of time*—`12k req/s`, `$200/day`, `30 MB/s`—is a **rate**.
