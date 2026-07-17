@@ -1,12 +1,13 @@
-# Plan: the scenario table block (the remaining multi-line work)
+# Plan: the multi-line block work (shipped; polish remaining)
 
 Two features — **scenarios** (labelled multi-value) and **correlate** (coupling
 distributions) — needed one shared capability the engine originally lacked: a
-**multi-line, indentation-delimited block**. That block layer now ships, and the
-`correlate:` block is built on it. The **one remaining piece** is the `scenario
-<axis>:` table (Surface 1 below). This doc keeps the design rationale the block
-layer and the table rely on; the shipped pieces are summarised here, with their
-full behaviour living in the code and tests.
+**multi-line, indentation-delimited block**. The block layer and **both**
+surfaces built on it — the `correlate:` block and the `scenario <axis>:` table —
+now ship. This doc keeps the design rationale behind them; the shipped pieces
+are summarised here, with their full behaviour living in the code and tests.
+What remains is **rendering/sampling polish**, not new surfaces (see the bottom
+two subsections of Surface 1 and the open questions).
 
 Design principle throughout: **explicit over implicit** — no behaviour is
 triggered by argument position, argument type, or statement order, only by an
@@ -100,7 +101,7 @@ When a binary op combines `L` and `R`, axis sets resolve by name:
 Cross-vs-align is decided by the axis *name* the author typed, so it's explicit.
 A **cell-count cap** (256) guards a runaway cross with an error naming the axes.
 
-## Surface 1 — the `scenario <axis>:` table
+## Surface 1 — the `scenario <axis>:` table (shipped)
 
 The common real case is "one axis, many variables moving together". Columns are
 coords, rows are variables, every cell an expression, all bound to one axis:
@@ -115,15 +116,17 @@ scenario case:
 margin = (price - cost) * traffic     # all share axis `case` → 3 aligned outcomes
 ```
 
-- Header `scenario <axis>:` names the axis; the optional `# …` row names the
-  coords (columns), unquoted (header position).
-- Each body row `name = e1 e2 e3 [unit]` **desugars to the shipped inline
-  constructor**: `name = scenario[axis](low: e1, base: e2, high: e3) [unit]`.
-  The table is a column-aligned way to write many one-row constructors sharing
-  an axis; same-table rows zip (never cross).
-
-New work is **parsing** only: read the coord header, split each row into column
-expressions, validate every row has one cell per coord. No new value model.
+- Header `scenario <axis>:` names the axis (bare `scenario:` defaults it to
+  `case`, matching the inline constructor); the **required** first `# …` body
+  row names the coords (columns), unquoted (header position).
+- Each body row `name = e1 e2 e3 [unit]` **desugars to the inline constructor**:
+  `name = scenario[axis](low: e1, base: e2, high: e3) [unit]`. The table is a
+  column-aligned way to write many one-row constructors sharing an axis;
+  same-table rows zip (never cross).
+- Cells are split on **runs of two or more spaces**, so a cell may hold a spaced
+  expression (`1 to 10`, `pert(1, 2, 3)`); a trailing token beyond the coord
+  count is the shared unit. It is genuinely **parsing only** — no new value
+  model; the desugared source is fed back through the ordinary expression path.
 
 ### Sampling — common random numbers
 
@@ -213,19 +216,23 @@ closed form (above) reads the imposed correlation into the combined spread.
 2. **`correlate:` block** — body grammar (definitions + `cor` pairs); the
    Iman–Conover core plus matrix assembly + Cholesky. ✅ shipped.
 3. **`scenario <axis>:` table** — column-aligned row parsing; desugars to the
-   shipped inline constructor. Plus the ≥2-axis grid rendering above. ← remaining.
+   inline constructor. ✅ shipped (single-axis). The ≥2-axis grid rendering
+   above remains.
 
-## Open questions (for the scenario table)
+## Remaining polish (no new surface)
 
-1. How a multi-cell scenario-table row reports a per-column parse error.
-2. Whether a scenario-table row may hold distribution cells that must share
-   common random numbers across coords (see Sampling above) — deferred until the
-   table exercises it.
+1. **≥2-axis grid rendering** — the engine still emits the one-line
+   `case: low=…, base=…` fallback; the labelled grid / heatmap for two axes and
+   the "N cells, showing summary" collapse for more are unbuilt.
+2. **Common random numbers** across a scenario axis with distribution cells (see
+   Sampling above) — not exercised until distribution cells are compared across
+   coords; constrains the RNG choice when it is.
 3. Coord-label formatting inside a grid cell (distribution summaries).
 
-Settled while building the block layer: indentation is lenient
-(strictly-greater than the header); a non-PD `correlate:` matrix errors on the
-header rather than projecting.
+Settled while building: indentation is lenient (strictly-greater than the
+header); a non-PD `correlate:` matrix errors on the header rather than
+projecting; a scenario table requires its `# …` coord header row first; cells
+split on runs of two or more spaces.
 
 ## Non-goals (first build)
 
