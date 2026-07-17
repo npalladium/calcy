@@ -15,25 +15,25 @@ import tseslint from 'typescript-eslint';
 import svelteConfig from './svelte.config.js';
 
 const svelteOnly = svelte.configs.recommended
-	.filter((config) => config.name !== 'svelte:base:setup-for-svelte-script')
-	.map((config) => ({ ...config, files: ['**/*.svelte'] }));
+  .filter((config) => config.name !== 'svelte:base:setup-for-svelte-script')
+  .map((config) => ({ ...config, files: ['**/*.svelte'] }));
 
 export default tseslint.config(
-	{
-		ignores: ['.svelte-kit/', 'build/', 'dist/', 'node_modules/', 'static/', '**/*.md']
-	},
-	...svelteOnly,
-	{
-		files: ['**/*.svelte'],
-		languageOptions: {
-			// The app is a client-side PWA (see svelte.config.js) — script
-			// blocks reference browser globals (window, localStorage, etc.).
-			globals: { ...globals.browser },
-			parser: svelteParser,
-			parserOptions: {
-				parser: tseslint.parser,
-				svelteConfig
-			}
-		}
-	}
+  {
+    ignores: ['.svelte-kit/', 'build/', 'dist/', 'node_modules/', 'static/', '**/*.md']
+  },
+  ...svelteOnly,
+  {
+    files: ['**/*.svelte'],
+    languageOptions: {
+      // The app is a client-side PWA (see svelte.config.js) — script
+      // blocks reference browser globals (window, localStorage, etc.).
+      globals: { ...globals.browser },
+      parser: svelteParser,
+      parserOptions: {
+        parser: tseslint.parser,
+        svelteConfig
+      }
+    }
+  }
 );

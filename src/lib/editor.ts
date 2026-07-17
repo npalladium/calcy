@@ -5,17 +5,17 @@
 // `unit name = expr`. Comments (after `#`) are ignored. Order of first
 // definition is preserved; redefinitions are deduped.
 export function collectVariables(text: string): string[] {
-	const seen = new Set<string>();
-	const out: string[] = [];
-	for (const raw of text.split('\n')) {
-		const line = raw.split('#', 1)[0];
-		const m = /^\s*(?:unit\s+)?([A-Za-z_]\w*)\s*=(?!=)/.exec(line);
-		if (m && !seen.has(m[1])) {
-			seen.add(m[1]);
-			out.push(m[1]);
-		}
-	}
-	return out;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of text.split('\n')) {
+    const line = raw.split('#', 1)[0];
+    const m = /^\s*(?:unit\s+)?([A-Za-z_]\w*)\s*=(?!=)/.exec(line);
+    if (m && !seen.has(m[1])) {
+      seen.add(m[1]);
+      out.push(m[1]);
+    }
+  }
+  return out;
 }
 
 // Insertion text + cursor offset for a function-name autocomplete pick.
@@ -23,19 +23,19 @@ export function collectVariables(text: string): string[] {
 // themselves; inserting `name(` and landing the cursor right after the
 // paren puts them straight into the argument list.
 export function functionInsertion(name: string): { insert: string; cursorOffset: number } {
-	const insert = `${name}(`;
-	return { insert, cursorOffset: insert.length };
+  const insert = `${name}(`;
+  return { insert, cursorOffset: insert.length };
 }
 
 // Pin (or clear) the output unit of a single sheet line by rewriting its
 // trailing `in`/`to` conversion — the sheet text stays the source of truth.
 // A trailing comment is preserved. An empty unit removes the conversion.
 export function setLineConversion(line: string, unit: string): string {
-	const hash = line.indexOf('#');
-	const code = (hash >= 0 ? line.slice(0, hash) : line).trimEnd();
-	const comment = hash >= 0 ? line.slice(hash).trim() : '';
-	const core = code.replace(/\s+(?:in|to)\s+.+$/, '');
-	const u = unit.trim();
-	const rebuilt = u ? `${core} in ${u}` : core;
-	return comment ? `${rebuilt} ${comment}` : rebuilt;
+  const hash = line.indexOf('#');
+  const code = (hash >= 0 ? line.slice(0, hash) : line).trimEnd();
+  const comment = hash >= 0 ? line.slice(hash).trim() : '';
+  const core = code.replace(/\s+(?:in|to)\s+.+$/, '');
+  const u = unit.trim();
+  const rebuilt = u ? `${core} in ${u}` : core;
+  return comment ? `${rebuilt} ${comment}` : rebuilt;
 }

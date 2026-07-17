@@ -17,51 +17,51 @@ const ARROW = '→';
 const guide = readFileSync(new URL('../src/lib/docs/guide.md', import.meta.url), 'utf8');
 
 function fencedBlocks(md: string): string[] {
-	const out: string[] = [];
-	const re = /```[^\n]*\n([\s\S]*?)```/g;
-	let m: RegExpExecArray | null;
-	// biome-ignore lint/suspicious/noAssignInExpressions: standard regex-exec loop
-	while ((m = re.exec(md)) !== null) out.push(m[1].replace(/\n$/, ''));
-	return out;
+  const out: string[] = [];
+  const re = /```[^\n]*\n([\s\S]*?)```/g;
+  let m: RegExpExecArray | null;
+  // biome-ignore lint/suspicious/noAssignInExpressions: standard regex-exec loop
+  while ((m = re.exec(md)) !== null) out.push(m[1].replace(/\n$/, ''));
+  return out;
 }
 
 // Split a doc line into its source expression and the expected display text from
 // a trailing `→ result` annotation (null when the line has no annotation).
 function splitArrow(line: string): [source: string, expected: string | null] {
-	const i = line.indexOf(ARROW);
-	if (i === -1) return [line, null];
-	return [line.slice(0, i).trimEnd(), line.slice(i + ARROW.length).trim()];
+  const i = line.indexOf(ARROW);
+  if (i === -1) return [line, null];
+  return [line.slice(0, i).trimEnd(), line.slice(i + ARROW.length).trim()];
 }
 
 describe('Guide code examples evaluate as documented', () => {
-	const blocks = fencedBlocks(guide);
+  const blocks = fencedBlocks(guide);
 
-	it('has the expected number of example blocks', () => {
-		expect(blocks.length).toBeGreaterThan(0);
-	});
+  it('has the expected number of example blocks', () => {
+    expect(blocks.length).toBeGreaterThan(0);
+  });
 
-	let prefix: string[] = [];
-	blocks.forEach((block, bi) => {
-		const raw = block.split('\n');
-		const sources = raw.map((l) => splitArrow(l)[0]);
-		const expected = raw.map((l) => splitArrow(l)[1]);
-		const offset = prefix.length;
-		const fullSource = [...prefix, ...sources];
+  let prefix: string[] = [];
+  blocks.forEach((block, bi) => {
+    const raw = block.split('\n');
+    const sources = raw.map((l) => splitArrow(l)[0]);
+    const expected = raw.map((l) => splitArrow(l)[1]);
+    const offset = prefix.length;
+    const fullSource = [...prefix, ...sources];
 
-		it(`block ${bi + 1} runs without errors and matches its annotations`, () => {
-			const res = lines(fullSource.join('\n'), { numberFormat: 'auto' });
-			raw.forEach((_, li) => {
-				if (sources[li].trim() === '') return;
-				const r = res.find((x) => x.index === offset + li);
-				expect(r?.error, `"${sources[li]}" errored`).toBeFalsy();
-				if (expected[li] != null) {
-					expect(r?.display?.text, `"${sources[li]}"`).toBe(expected[li]);
-				}
-			});
-		});
+    it(`block ${bi + 1} runs without errors and matches its annotations`, () => {
+      const res = lines(fullSource.join('\n'), { numberFormat: 'auto' });
+      raw.forEach((_, li) => {
+        if (sources[li].trim() === '') return;
+        const r = res.find((x) => x.index === offset + li);
+        expect(r?.error, `"${sources[li]}" errored`).toBeFalsy();
+        if (expected[li] != null) {
+          expect(r?.display?.text, `"${sources[li]}"`).toBe(expected[li]);
+        }
+      });
+    });
 
-		prefix = fullSource;
-	});
+    prefix = fullSource;
+  });
 });
 
 // The Reference and How-it-works docs aren't line-for-line copy-pasteable the way
@@ -82,38 +82,38 @@ const RESULT_ANNOT = /#\s*(?:->|→)\s*(.+?)\s*$/;
 // The annotation is `value` optionally trailed by `  (prose)`. The value may
 // contain single spaces (`€1,414 (€1,000 ... €2,000)`); prose is set off by 2+.
 function expectedValue(annot: string): string {
-	return annot.split(/\s{2,}/)[0].trim();
+  return annot.split(/\s{2,}/)[0].trim();
 }
 
 for (const file of ['reference.md', 'how-it-works.md']) {
-	describe(`${file} worked examples`, () => {
-		const md = readFileSync(new URL(`../src/lib/docs/${file}`, import.meta.url), 'utf8');
-		const blocks = fencedBlocks(md);
+  describe(`${file} worked examples`, () => {
+    const md = readFileSync(new URL(`../src/lib/docs/${file}`, import.meta.url), 'utf8');
+    const blocks = fencedBlocks(md);
 
-		it('reads the doc', () => {
-			expect(md.length).toBeGreaterThan(0);
-		});
+    it('reads the doc', () => {
+      expect(md.length).toBeGreaterThan(0);
+    });
 
-		blocks.forEach((block, bi) => {
-			it(`block ${bi + 1} backs its claims`, () => {
-				const raw = block.split('\n');
-				const sources = raw.map((l) => l.replace(/#.*$/, '').trimEnd());
-				const res = lines(sources.join('\n'), { numberFormat: 'auto' });
-				raw.forEach((line, li) => {
-					if (sources[li].trim() === '') return;
-					const r = res.find((x) => x.index === li);
-					if (/#.*\bERROR\b/.test(line)) {
-						expect(r?.error, `"${sources[li]}" should error but didn't`).toBeTruthy();
-						return;
-					}
-					const m = line.match(RESULT_ANNOT);
-					if (!m) return; // signature / placeholder / prose-only comment
-					expect(r?.error, `"${sources[li]}" errored: ${r?.error}`).toBeFalsy();
-					if (!r?.isDist) {
-						expect(r?.display?.text, `"${sources[li]}"`).toBe(expectedValue(m[1]));
-					}
-				});
-			});
-		});
-	});
+    blocks.forEach((block, bi) => {
+      it(`block ${bi + 1} backs its claims`, () => {
+        const raw = block.split('\n');
+        const sources = raw.map((l) => l.replace(/#.*$/, '').trimEnd());
+        const res = lines(sources.join('\n'), { numberFormat: 'auto' });
+        raw.forEach((line, li) => {
+          if (sources[li].trim() === '') return;
+          const r = res.find((x) => x.index === li);
+          if (/#.*\bERROR\b/.test(line)) {
+            expect(r?.error, `"${sources[li]}" should error but didn't`).toBeTruthy();
+            return;
+          }
+          const m = line.match(RESULT_ANNOT);
+          if (!m) return; // signature / placeholder / prose-only comment
+          expect(r?.error, `"${sources[li]}" errored: ${r?.error}`).toBeFalsy();
+          if (!r?.isDist) {
+            expect(r?.display?.text, `"${sources[li]}"`).toBe(expectedValue(m[1]));
+          }
+        });
+      });
+    });
+  });
 }

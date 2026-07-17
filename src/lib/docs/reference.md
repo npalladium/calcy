@@ -333,6 +333,7 @@ Reserved words — don’t use them as variable names.
 | `every` | reserved for a future per-window operator (not yet bound) |
 | `where` | one-off locals for a line — `expr where a = 1, b = 2` |
 | `via` | pick a named bridge for a conversion — `in INR via fx` |
+| `over` | collapse a scenario axis in a reducer — `min(total over case)` |
 | `unit` | define your own unit — `unit sprint = 2 week` |
 | `currency` | mint a currency dimension — `currency BTC, bitcoin` |
 | `bridge` | name an exchange rate — `bridge fx = 83 ₹/$` |
@@ -351,6 +352,8 @@ Reserved words — don’t use them as variable names.
 | `triangular(lo, ml, hi)` | Three-point triangular estimate; flatter than pert. |
 | `exponential(mean)` | Wait time between events; carries the mean’s units. |
 | `poisson(mean)` | Whole count of events at the given mean rate. |
+| `weibull(shape, scale)` | Time-to-failure / reliability; scale carries the units, shape is dimensionless. |
+| `binomial(trials, p)` | Whole count of successes in n independent trials (bounded by n). |
 | `discrete(w1: v1, w2: v2, …)` | Weighted scenarios (or equal-weight from a list). |
 | `mixture(d1, d2, …)` | Equal-weight (or weighted) mix of like-dimensioned distributions. |
 | `ci(lo, hi[, level])` | Confidence interval as a function — the `lo to hi` form, with an optional level. |
@@ -361,12 +364,21 @@ Reserved words — don’t use them as variable names.
 |---|---|
 | `mean(d)` | Average of a distribution (exact for known families). |
 | `median(d)` | Middle value (50th percentile). |
+| `mode(d)` | Most likely value (density peak); analytic for known families, else a smoothed estimate. |
+| `skew(d)` | Asymmetry (Fisher–Pearson): positive = upside tail. Sample skew is high-variance. |
 | `sd(d)` _(alias: `stdev`)_ | Standard deviation. |
 | `p(d, q)` _(alias: `percentile`)_ | The q-quantile, q in 0…1. |
+| `interval(d, level)` | The central [lo, hi] band at a confidence level, as a 2-element list. |
 | `min(d) / min(list)` | Smallest value. |
 | `max(d) / max(list)` | Largest value. |
 | `sum(list) / sum(above)` | Total of a list, or of preceding result lines. |
 | `chance(pred)` | Probability a predicate holds (mean of a 0/1 mask). |
+
+**Scenarios**
+
+| Call | What it does |
+|---|---|
+| `pick(scenario, axis = "coord")` | Select one coord of a scenario axis; a partial pick keeps the remaining axes. |
 
 **Math**
 

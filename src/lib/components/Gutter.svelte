@@ -13,6 +13,7 @@
 // insert button that drops the line's value (or variable name, for an
 // assignment) at the editor cursor.
 import { astText, type LineResult } from '$lib/engine';
+import ResultText from './ResultText.svelte';
 import Sparkline from './Sparkline.svelte';
 
 let {
@@ -120,7 +121,7 @@ export function setScrollTop(top: number) {
 					{#if l.error}
 						⚠ {l.errorHint ?? l.error}
 					{:else if l.kind === 'value'}
-						{l.display?.text ?? ''}
+						{#if l.display}<ResultText display={l.display} />{/if}
 					{:else if l.kind === 'unitdef'}
 						unit {l.name}
 					{:else}

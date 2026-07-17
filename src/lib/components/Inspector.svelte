@@ -5,6 +5,7 @@ import type { SheetController } from '$lib/state/sheet.svelte';
 import DistributionPanel from './DistributionPanel.svelte';
 import RateCard from './RateCard.svelte';
 import ResultsGrid from './ResultsGrid.svelte';
+import ResultText from './ResultText.svelte';
 import Sensitivity from './Sensitivity.svelte';
 
 let { c }: { c: SheetController } = $props();
@@ -47,7 +48,7 @@ const selectedLine = $derived(c.selectedLine);
 		{/if}
 	{/if}
 	{#if !selectedLine?.isRate && !selectedLine?.isDist && selectedLine?.display}
-		<output class="point">{selectedLine.display.text}</output>
+		<output class="point"><ResultText display={selectedLine.display} /></output>
 	{/if}
 
 	<div class="grid-section">

@@ -1,43 +1,43 @@
 {
-	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-	"files": {
-		"includes": [
-			"src/**",
-			"tests/**",
-			"scripts/**",
-			"*.ts",
-			"*.js",
-			"*.json",
-			"!**/*.svelte",
-			"!!**/.svelte-kit",
-			"!!**/.stryker-tmp",
-			"!!**/reports",
-			"!!**/build",
-			"!!**/dist",
-			"!!**/node_modules",
-			"!!**/static"
-		]
-	},
-	"formatter": {
-		"enabled": true,
-		"indentStyle": "tab",
-		"lineWidth": 100
-	},
-	"linter": {
-		"enabled": true,
-		"rules": {
-			"preset": "recommended",
-			"suspicious": {
-				"noExplicitAny": "off"
-			}
-		}
-	},
-	"javascript": {
-		"formatter": { "quoteStyle": "single", "trailingCommas": "none" }
-	},
-	"css": {
-		"parser": { "tailwindDirectives": true }
-	},
-	"assist": { "actions": { "source": { "organizeImports": "on" } } }
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": [
+      "src/**",
+      "tests/**",
+      "scripts/**",
+      "*.ts",
+      "*.js",
+      "*.json",
+      "!**/*.svelte",
+      "!!**/.svelte-kit",
+      "!!**/.stryker-tmp",
+      "!!**/reports",
+      "!!**/build",
+      "!!**/dist",
+      "!!**/node_modules",
+      "!!**/static"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": { "quoteStyle": "single", "trailingCommas": "none" }
+  },
+  "css": {
+    "parser": { "tailwindDirectives": true }
+  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } }
 }

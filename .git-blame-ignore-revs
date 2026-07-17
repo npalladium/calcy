@@ -1,0 +1,6 @@
+# Revisions git blame should skip (whitespace-only, tree-wide reformats).
+# Enable locally with:  git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub honours this file automatically.
+
+# Reformat from tabs to spaces
+a594da28f28d24ba6354e7b49604b2a5084221c8

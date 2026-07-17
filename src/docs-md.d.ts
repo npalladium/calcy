@@ -3,6 +3,6 @@
 // ambient declaration (a module `app.d.ts`-style file would scope the wildcard
 // and TS wouldn't apply it).
 declare module '*.md' {
-	const component: import('svelte').Component;
-	export default component;
+  const component: import('svelte').Component;
+  export default component;
 }

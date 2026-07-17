@@ -5,12 +5,12 @@
 // stays a global ambient declaration (an `app.d.ts`-style module file would
 // scope it and TS wouldn't apply it — see docs-md.d.ts).
 declare module 'virtual:pwa-register' {
-	interface RegisterSWOptions {
-		immediate?: boolean;
-		onNeedRefresh?: () => void;
-		onOfflineReady?: () => void;
-		onRegisteredSW?: (swUrl: string, r: ServiceWorkerRegistration | undefined) => void;
-		onRegisterError?: (error: unknown) => void;
-	}
-	export function registerSW(options?: RegisterSWOptions): (reloadPage?: boolean) => Promise<void>;
+  interface RegisterSWOptions {
+    immediate?: boolean;
+    onNeedRefresh?: () => void;
+    onOfflineReady?: () => void;
+    onRegisteredSW?: (swUrl: string, r: ServiceWorkerRegistration | undefined) => void;
+    onRegisterError?: (error: unknown) => void;
+  }
+  export function registerSW(options?: RegisterSWOptions): (reloadPage?: boolean) => Promise<void>;
 }

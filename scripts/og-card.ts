@@ -19,77 +19,77 @@ export const H = 630;
 // evaluated as one sheet (later lines reuse earlier names). `*` is shown as `×`.
 export const SCENARIO_COMMENT = '# a 10K run at an easy, uncertain pace';
 export const SCENARIO_EXPRS = [
-	'pace = (5 to 6) min/km',
-	'time = 10 km * pace in min',
-	'speed = 10 km / time in km/h',
-	'burn = 600 kcal/h * time in kcal'
+  'pace = (5 to 6) min/km',
+  'time = 10 km * pace in min',
+  'speed = 10 km / time in km/h',
+  'burn = 600 kcal/h * time in kcal'
 ];
 // High N for a smooth histogram and crisp CI bounds; fixed seed for a
 // reproducible image. The guard test pins the resulting display values.
 export const OG_ENGINE_OPTS = { N: 20000, seed: 7, numberFormat: 'auto' as const };
 
 export interface ScenarioRow {
-	label: string; // pretty source (× for *)
-	mid: string;
-	lo: string;
-	hi: string;
-	unit: string;
-	hist: number[];
+  label: string; // pretty source (× for *)
+  mid: string;
+  lo: string;
+  hi: string;
+  unit: string;
+  hist: number[];
 }
 export interface Scenario {
-	comment: string;
-	rows: ScenarioRow[];
+  comment: string;
+  rows: ScenarioRow[];
 }
 
 export function computeScenario(): Scenario {
-	const eng = new Engine(OG_ENGINE_OPTS);
-	const lines = eng.evalSheet(SCENARIO_EXPRS.join('\n')).lines;
-	const rows = lines.map((l, i): ScenarioRow => {
-		if (l.error) throw new Error(`og scenario: "${SCENARIO_EXPRS[i]}" errored: ${l.error}`);
-		const d = l.display;
-		const stat = (name: string) => d?.stats?.find((s) => s.label === name)?.value ?? '';
-		const hist = l.summary?.kind === 'dist' ? l.summary.hist : [];
-		return {
-			label: SCENARIO_EXPRS[i].replace(/\*/g, '×'),
-			mid: stat('median'),
-			lo: stat('p5'),
-			hi: stat('p95'),
-			unit: d?.unit ?? '',
-			hist
-		};
-	});
-	return { comment: SCENARIO_COMMENT, rows };
+  const eng = new Engine(OG_ENGINE_OPTS);
+  const lines = eng.evalSheet(SCENARIO_EXPRS.join('\n')).lines;
+  const rows = lines.map((l, i): ScenarioRow => {
+    if (l.error) throw new Error(`og scenario: "${SCENARIO_EXPRS[i]}" errored: ${l.error}`);
+    const d = l.display;
+    const stat = (name: string) => d?.stats?.find((s) => s.label === name)?.value ?? '';
+    const hist = l.summary?.kind === 'dist' ? l.summary.hist : [];
+    return {
+      label: SCENARIO_EXPRS[i].replace(/\*/g, '×'),
+      mid: stat('median'),
+      lo: stat('p5'),
+      hi: stat('p95'),
+      unit: d?.unit ?? '',
+      hist
+    };
+  });
+  return { comment: SCENARIO_COMMENT, rows };
 }
 
 // Inline SVG histogram, mirroring src/lib/components/Sparkline.svelte (bars
 // normalised to the tallest, drawn bottom-up).
 function spark(hist: number[], w = 104, h = 30): string {
-	const max = Math.max(1, ...hist);
-	const bw = w / hist.length;
-	const bars = hist
-		.map((v, i) => {
-			const bh = (v / max) * h;
-			return `<rect x="${(i * bw).toFixed(2)}" y="${(h - bh).toFixed(2)}" width="${Math.max(0.5, bw - 0.7).toFixed(2)}" height="${bh.toFixed(2)}" />`;
-		})
-		.join('');
-	return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="distribution histogram">${bars}</svg>`;
+  const max = Math.max(1, ...hist);
+  const bw = w / hist.length;
+  const bars = hist
+    .map((v, i) => {
+      const bh = (v / max) * h;
+      return `<rect x="${(i * bw).toFixed(2)}" y="${(h - bh).toFixed(2)}" width="${Math.max(0.5, bw - 0.7).toFixed(2)}" height="${bh.toFixed(2)}" />`;
+    })
+    .join('');
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="distribution histogram">${bars}</svg>`;
 }
 
 // Highlight the `to` / `in` keywords in a source line without touching substrings
 // (the surrounding spaces keep `in` out of `min`).
 function highlightSrc(label: string): string {
-	return label
-		.replace(/ to /g, ' <span class="kw">to</span> ')
-		.replace(/ in /g, ' <span class="kw">in</span> ');
+  return label
+    .replace(/ to /g, ' <span class="kw">to</span> ')
+    .replace(/ in /g, ' <span class="kw">in</span> ');
 }
 
 function row(r: ScenarioRow): string {
-	return `<div class="row"><span class="src">${highlightSrc(r.label)}</span><span class="res">${spark(r.hist)}<span class="nums"><span class="mid">${r.mid}</span> <span class="rng">(${r.lo} … ${r.hi}) ${r.unit}</span></span></span></div>`;
+  return `<div class="row"><span class="src">${highlightSrc(r.label)}</span><span class="res">${spark(r.hist)}<span class="nums"><span class="mid">${r.mid}</span> <span class="rng">(${r.lo} … ${r.hi}) ${r.unit}</span></span></span></div>`;
 }
 
 export function renderCardHtml(s: Scenario): string {
-	const rows = s.rows.map(row).join('\n      ');
-	return `<!doctype html><html><head><meta charset="utf-8" /><style>
+  const rows = s.rows.map(row).join('\n      ');
+  return `<!doctype html><html><head><meta charset="utf-8" /><style>
   :root {
     --ink-0: #0a0a12; --ink-1: #11101c; --ink-2: #1a1830; --ink-3: #272445;
     --violet: #8a7cff; --violet-soft: #c4b1ff; --green: #7ee0a0; --blue: #7fc8ff;

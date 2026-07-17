@@ -10,170 +10,170 @@
  *      be retuned in one place.
  */
 @theme {
-	/* ink — deep indigo, near-black (surfaces, darkest → lightest) */
-	--color-ink-0: #0a0a12;
-	--color-ink-1: #11101c;
-	--color-ink-2: #1a1830;
-	--color-ink-3: #272445;
-	--color-ink-4: #34315a;
+  /* ink — deep indigo, near-black (surfaces, darkest → lightest) */
+  --color-ink-0: #0a0a12;
+  --color-ink-1: #11101c;
+  --color-ink-2: #1a1830;
+  --color-ink-3: #272445;
+  --color-ink-4: #34315a;
 
-	/* brand violet + one warm accent */
-	--color-violet: #8a7cff;
-	--color-violet-soft: #c4b1ff;
-	--color-violet-deep: #5b4fd6;
-	--color-warm: #ffb27a;
-	--color-warm-soft: #ffe0b8;
+  /* brand violet + one warm accent */
+  --color-violet: #8a7cff;
+  --color-violet-soft: #c4b1ff;
+  --color-violet-deep: #5b4fd6;
+  --color-warm: #ffb27a;
+  --color-warm-soft: #ffe0b8;
 
-	/* result colour-code (value / rate / distribution / error) */
-	--color-green: #7ee0a0;
-	--color-green-soft: #c8f5d0;
-	--color-blue: #7fc8ff;
-	--color-red: #ff8a8a;
+  /* result colour-code (value / rate / distribution / error) */
+  --color-green: #7ee0a0;
+  --color-green-soft: #c8f5d0;
+  --color-blue: #7fc8ff;
+  --color-red: #ff8a8a;
 
-	/* text tints, brightest → faintest */
-	--color-text: #ecebf6;
-	--color-text-2: #c4c2d6;
-	--color-text-dim: #9a97b5;
-	--color-text-faint: #6f6b88;
+  /* text tints, brightest → faintest */
+  --color-text: #ecebf6;
+  --color-text-2: #c4c2d6;
+  --color-text-dim: #9a97b5;
+  --color-text-faint: #6f6b88;
 
-	/* paper — light-theme counterpart to ink (surfaces, lightest → darkest) */
-	--color-paper-0: #f6f5fb;
-	--color-paper-1: #ffffff;
-	--color-paper-2: #ececf6;
-	--color-paper-3: #dcdaec;
-	--color-paper-4: #c7c4e0;
+  /* paper — light-theme counterpart to ink (surfaces, lightest → darkest) */
+  --color-paper-0: #f6f5fb;
+  --color-paper-1: #ffffff;
+  --color-paper-2: #ececf6;
+  --color-paper-3: #dcdaec;
+  --color-paper-4: #c7c4e0;
 
-	/* light-theme text tints, darkest → faintest */
-	--color-text-light: #1c1a2e;
-	--color-text-light-2: #45435c;
-	--color-text-light-dim: #6a6785;
-	--color-text-light-faint: #8b88a6;
+  /* light-theme text tints, darkest → faintest */
+  --color-text-light: #1c1a2e;
+  --color-text-light-2: #45435c;
+  --color-text-light-dim: #6a6785;
+  --color-text-light-faint: #8b88a6;
 
-	/* light-theme result colour-code — darkened for AA contrast on white */
-	--color-green-light: #1c8a4c;
-	--color-blue-light: #1768c4;
-	--color-red-light: #c8342f;
-	--color-violet-light: #6a4fe0;
+  /* light-theme result colour-code — darkened for AA contrast on white */
+  --color-green-light: #1c8a4c;
+  --color-blue-light: #1768c4;
+  --color-red-light: #c8342f;
+  --color-violet-light: #6a4fe0;
 
-	--font-mono: "SFMono-Regular", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
-	--font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "SFMono-Regular", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-	/* aliases kept for existing references */
-	--color-brand: #8a7cff;
-	--color-ink: #0a0a12;
-	--color-accent-rgb: 138 124 255;
+  /* aliases kept for existing references */
+  --color-brand: #8a7cff;
+  --color-ink: #0a0a12;
+  --color-accent-rgb: 138 124 255;
 }
 
 /* Dark theme (default — also the fallback if the `dark`/`light` class is
    somehow absent, so a stale cached shell never renders unstyled). */
 :root,
 html.dark {
-	/* surfaces */
-	--bg: var(--color-ink-0);
-	--surface-1: var(--color-ink-1);
-	--surface-2: var(--color-ink-2);
-	--surface-3: var(--color-ink-3);
-	--surface-sel: rgba(26, 24, 48, 0.55);
-	--surface-accent: #211d3a;
+  /* surfaces */
+  --bg: var(--color-ink-0);
+  --surface-1: var(--color-ink-1);
+  --surface-2: var(--color-ink-2);
+  --surface-3: var(--color-ink-3);
+  --surface-sel: rgba(26, 24, 48, 0.55);
+  --surface-accent: #211d3a;
 
-	/* borders */
-	--border: var(--color-ink-3);
-	--border-strong: var(--color-ink-4);
-	--border-accent: #3a2f5e;
+  /* borders */
+  --border: var(--color-ink-3);
+  --border-strong: var(--color-ink-4);
+  --border-accent: #3a2f5e;
 
-	/* text */
-	--text: var(--color-text);
-	--text-2: var(--color-text-2);
-	--text-muted: var(--color-text-dim);
-	--text-faint: var(--color-text-faint);
+  /* text */
+  --text: var(--color-text);
+  --text-2: var(--color-text-2);
+  --text-muted: var(--color-text-dim);
+  --text-faint: var(--color-text-faint);
 
-	/* accent */
-	--accent: var(--color-violet);
-	--accent-soft: var(--color-violet-soft);
-	--accent-deep: var(--color-violet-deep);
+  /* accent */
+  --accent: var(--color-violet);
+  --accent-soft: var(--color-violet-soft);
+  --accent-deep: var(--color-violet-deep);
 
-	/* result semantics */
-	--c-value: var(--color-green);
-	--c-value-soft: var(--color-green-soft);
-	--c-rate: var(--color-blue);
-	--c-dist: var(--color-violet-soft);
-	--c-error: var(--color-red);
+  /* result semantics */
+  --c-value: var(--color-green);
+  --c-value-soft: var(--color-green-soft);
+  --c-rate: var(--color-blue);
+  --c-dist: var(--color-violet-soft);
+  --c-error: var(--color-red);
 
-	/* status surfaces */
-	--danger: var(--color-red);
-	--danger-bg: #2a1414;
-	--danger-border: #5a2222;
-	--warn: var(--color-warm);
-	--warn-soft: var(--color-warm-soft);
-	--warn-bg: #2a2114;
-	--warn-border: #5a4622;
+  /* status surfaces */
+  --danger: var(--color-red);
+  --danger-bg: #2a1414;
+  --danger-border: #5a2222;
+  --warn: var(--color-warm);
+  --warn-soft: var(--color-warm-soft);
+  --warn-bg: #2a2114;
+  --warn-border: #5a4622;
 
-	/* effects */
-	--shadow: rgba(0, 0, 0, 0.5);
-	/* dimming scrim behind floating panels / overlays */
-	--scrim: rgba(0, 0, 0, 0.45);
+  /* effects */
+  --shadow: rgba(0, 0, 0, 0.5);
+  /* dimming scrim behind floating panels / overlays */
+  --scrim: rgba(0, 0, 0, 0.45);
 
-	color-scheme: dark;
+  color-scheme: dark;
 }
 
 /* Light theme: same token names, `paper`/`text-light`/darkened result colours
    so every component that only ever references the semantic tokens needs no
    per-component change. */
 html.light {
-	/* surfaces */
-	--bg: var(--color-paper-0);
-	--surface-1: var(--color-paper-1);
-	--surface-2: var(--color-paper-2);
-	--surface-3: var(--color-paper-3);
-	--surface-sel: rgba(199, 196, 224, 0.55);
-	--surface-accent: #ece8fb;
+  /* surfaces */
+  --bg: var(--color-paper-0);
+  --surface-1: var(--color-paper-1);
+  --surface-2: var(--color-paper-2);
+  --surface-3: var(--color-paper-3);
+  --surface-sel: rgba(199, 196, 224, 0.55);
+  --surface-accent: #ece8fb;
 
-	/* borders */
-	--border: var(--color-paper-3);
-	--border-strong: var(--color-paper-4);
-	--border-accent: #cabdf2;
+  /* borders */
+  --border: var(--color-paper-3);
+  --border-strong: var(--color-paper-4);
+  --border-accent: #cabdf2;
 
-	/* text */
-	--text: var(--color-text-light);
-	--text-2: var(--color-text-light-2);
-	--text-muted: var(--color-text-light-dim);
-	--text-faint: var(--color-text-light-faint);
+  /* text */
+  --text: var(--color-text-light);
+  --text-2: var(--color-text-light-2);
+  --text-muted: var(--color-text-light-dim);
+  --text-faint: var(--color-text-light-faint);
 
-	/* accent */
-	--accent: var(--color-violet-deep);
-	--accent-soft: var(--color-violet-light);
-	--accent-deep: var(--color-violet-deep);
+  /* accent */
+  --accent: var(--color-violet-deep);
+  --accent-soft: var(--color-violet-light);
+  --accent-deep: var(--color-violet-deep);
 
-	/* result semantics */
-	--c-value: var(--color-green-light);
-	--c-value-soft: #2fae67;
-	--c-rate: var(--color-blue-light);
-	--c-dist: var(--color-violet-light);
-	--c-error: var(--color-red-light);
+  /* result semantics */
+  --c-value: var(--color-green-light);
+  --c-value-soft: #2fae67;
+  --c-rate: var(--color-blue-light);
+  --c-dist: var(--color-violet-light);
+  --c-error: var(--color-red-light);
 
-	/* status surfaces */
-	--danger: var(--color-red-light);
-	--danger-bg: #fdecec;
-	--danger-border: #f3b9b6;
-	--warn: #a35a12;
-	--warn-soft: #7a4109;
-	--warn-bg: #fdf1e2;
-	--warn-border: #f0cd9c;
+  /* status surfaces */
+  --danger: var(--color-red-light);
+  --danger-bg: #fdecec;
+  --danger-border: #f3b9b6;
+  --warn: #a35a12;
+  --warn-soft: #7a4109;
+  --warn-bg: #fdf1e2;
+  --warn-border: #f0cd9c;
 
-	/* effects */
-	--shadow: rgba(20, 18, 40, 0.14);
-	--scrim: rgba(30, 26, 54, 0.25);
+  /* effects */
+  --shadow: rgba(20, 18, 40, 0.14);
+  --scrim: rgba(30, 26, 54, 0.25);
 
-	color-scheme: light;
+  color-scheme: light;
 }
 
 html,
 body {
-	height: 100%;
+  height: 100%;
 }
 
 body {
-	background: var(--bg);
-	color: var(--text);
-	-webkit-font-smoothing: antialiased;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
 }
