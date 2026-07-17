@@ -149,6 +149,138 @@ export function correlateTo(
   return out;
 }
 
+// Cholesky factor L (lower triangular, L·Lᵀ = m) of a symmetric matrix. Doubles
+// as the positive-definiteness test: a non-positive pivot means m is not PD, so
+// the requested joint correlation is unachievable and we throw rather than
+// silently projecting onto the nearest valid matrix.
+function cholesky(m: number[][]): number[][] {
+  const n = m.length;
+  const L = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= i; j++) {
+      let sum = m[i][j];
+      for (let k = 0; k < j; k++) sum -= L[i][k] * L[j][k];
+      if (i === j) {
+        if (sum <= 1e-12) throw new Error('correlation matrix is not positive definite');
+        L[i][j] = Math.sqrt(sum);
+      } else {
+        L[i][j] = sum / L[j][j];
+      }
+    }
+  }
+  return L;
+}
+
+// Inverse of a lower-triangular matrix by forward substitution (also lower
+// triangular). Used to whiten the score matrix before re-colouring it with the
+// target factor.
+function invLowerTri(L: number[][]): number[][] {
+  const n = L.length;
+  const X = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  for (let j = 0; j < n; j++) {
+    X[j][j] = 1 / L[j][j];
+    for (let i = j + 1; i < n; i++) {
+      let s = 0;
+      for (let k = j; k < i; k++) s += L[i][k] * X[k][j];
+      X[i][j] = -s / L[i][i];
+    }
+  }
+  return X;
+}
+
+// A random permutation of 0..n-1 via Fisher–Yates driven by the sheet RNG, so
+// the score columns are reproducible under a fixed seed.
+function shuffledIndices(n: number, fns: DistFns): Int32Array {
+  const idx = new Int32Array(n);
+  for (let i = 0; i < n; i++) idx[i] = i;
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(fns.uniform() * (i + 1));
+    const t = idx[i];
+    idx[i] = idx[j];
+    idx[j] = t;
+  }
+  return idx;
+}
+
+// Iman–Conover, symmetric N-variable generalisation of `correlateTo`. Given `k`
+// independently-drawn sample columns and a target k×k rank-correlation matrix,
+// reorder each column so their joint rank correlation approximates the target,
+// **preserving every marginal exactly** (each output is a permutation of its
+// input). No column is privileged — unlike the single-reference `correlateTo`,
+// all move.
+//
+// Method: build a score matrix S whose columns are shared van der Waerden scores
+// placed in independent random orders; whiten S by the inverse Cholesky factor
+// of its own sample correlation, then re-colour by the Cholesky factor of the
+// target. Each output column's rank order is copied onto that variable's sorted
+// samples. Throws (via `cholesky`) if the target is not positive definite.
+export function correlateJoint(
+  cols: Float64Array[],
+  target: number[][],
+  fns: DistFns
+): Float64Array[] {
+  const k = cols.length;
+  if (k <= 1) return cols; // one variable: nothing to couple
+  const n = cols[0].length;
+
+  // Score matrix S (n×k): each column is the same van der Waerden scores in a
+  // fresh random order. Standardised (mean 0, unit variance) per column.
+  const base = new Float64Array(n);
+  for (let i = 0; i < n; i++) base[i] = normalInverseCdf((i + 1) / (n + 1));
+  let mean = 0;
+  for (let i = 0; i < n; i++) mean += base[i];
+  mean /= n;
+  let variance = 0;
+  for (let i = 0; i < n; i++) variance += (base[i] - mean) ** 2;
+  const sd = Math.sqrt(variance / n);
+  const S: Float64Array[] = [];
+  for (let j = 0; j < k; j++) {
+    const perm = shuffledIndices(n, fns);
+    const col = new Float64Array(n);
+    for (let i = 0; i < n; i++) col[i] = (base[perm[i]] - mean) / sd;
+    S.push(col);
+  }
+
+  // Sample correlation of S (diag 1 by construction), its Cholesky Q, and the
+  // target Cholesky P. A = Q⁻ᵀ Pᵀ maps whitened scores onto the target.
+  const T = Array.from({ length: k }, () => new Array<number>(k).fill(0));
+  for (let a = 0; a < k; a++)
+    for (let b = 0; b <= a; b++) {
+      let dot = 0;
+      for (let i = 0; i < n; i++) dot += S[a][i] * S[b][i];
+      T[a][b] = dot / n;
+      T[b][a] = T[a][b];
+    }
+  const Q = cholesky(T);
+  const P = cholesky(target);
+  const Qinv = invLowerTri(Q);
+  const A = Array.from({ length: k }, () => new Array<number>(k).fill(0));
+  for (let a = 0; a < k; a++)
+    for (let j = 0; j < k; j++) {
+      let s = 0;
+      for (let b = 0; b < k; b++) s += Qinv[b][a] * P[j][b];
+      A[a][j] = s;
+    }
+
+  // Re-coloured scores R* = S·A; copy each column's rank order onto the sorted
+  // marginal so values are untouched and only the pairing changes.
+  const out: Float64Array[] = [];
+  for (let j = 0; j < k; j++) {
+    const rb = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      let s = 0;
+      for (let a = 0; a < k; a++) s += S[a][i] * A[a][j];
+      rb[i] = s;
+    }
+    const tr = ranks(rb);
+    const sorted = Float64Array.from(cols[j]).sort();
+    const col = new Float64Array(n);
+    for (let i = 0; i < n; i++) col[i] = sorted[tr[i]];
+    out.push(col);
+  }
+  return out;
+}
+
 // ---- distribution constructors (all return base-unit sample arrays) ----
 
 // CI lo..hi at fns.level. Both positive -> lognormal; spanning/≤0 -> normal.
