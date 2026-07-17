@@ -345,7 +345,16 @@ export interface DistSummary {
 	histMax: number;
 }
 
-export type Summary = PointSummary | DistSummary;
+// A list-valued result (e.g. `interval(d, level)` → [lo, hi]). Rendered as a
+// bracketed interval; kept distinct from a point so the display and copy paths
+// can treat the several values as a unit.
+export interface ListSummary {
+	kind: 'list';
+	list: number[];
+	dim: Value['dim'];
+}
+
+export type Summary = PointSummary | DistSummary | ListSummary;
 
 function quantileSorted(sorted: Float64Array, p: number): number {
 	if (sorted.length === 1) return sorted[0];
@@ -377,6 +386,7 @@ export function histogram(
 }
 
 export function summarize(v: Value, level = 0.9): Summary {
+	if (v.list) return { kind: 'list', list: v.list, dim: v.dim };
 	if (v.scalar != null) return { kind: 'point', value: v.scalar, dim: v.dim };
 	const samples = v.samples as Float64Array;
 	const sorted = Float64Array.from(samples).sort();

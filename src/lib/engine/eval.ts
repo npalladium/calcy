@@ -260,6 +260,16 @@ const requireDimless = (v: Value, what: string): void => {
 	if (!dimIsZero(v.dim)) throw new Error(`${what} must be dimensionless`);
 };
 
+// The q-quantile of a value, analytic-first (exact inverse CDF for known
+// families) then empirical from the sample array — the same resolution `p(d, q)`
+// uses. A scalar is its own quantile. Shared by `interval(...)`.
+function percentileOf(d: Value, q: number): number {
+	if (d.scalar != null) return d.scalar;
+	const ap = analyticalPercentile(d, q);
+	if (ap != null && Number.isFinite(ap)) return ap;
+	return reducePercentile(d.samples as Float64Array, q);
+}
+
 // Parameter names (with aliases) for functions that accept named arguments.
 // First alias is canonical (used in error messages).
 const PARAMS: Record<string, string[][]> = {
@@ -294,6 +304,10 @@ const PARAMS: Record<string, string[][]> = {
 	percentile: [
 		['dist', 'd'],
 		['q', 'p']
+	],
+	interval: [
+		['dist', 'd'],
+		['level', 'confidence']
 	],
 	clamp: [['x'], ['lo', 'min'], ['hi', 'max']],
 	round: [['x'], ['digits', 'n']],
@@ -442,6 +456,12 @@ export const FUNCTIONS: FnDoc[] = [
 		category: 'Reducers',
 		sig: 'p(d, q)',
 		summary: 'The q-quantile, q in 0…1.'
+	},
+	{
+		name: 'interval',
+		category: 'Reducers',
+		sig: 'interval(d, level)',
+		summary: 'The central [lo, hi] band at a confidence level, as a 2-element list.'
 	},
 	{ name: 'min', category: 'Reducers', sig: 'min(d) / min(list)', summary: 'Smallest value.' },
 	{ name: 'max', category: 'Reducers', sig: 'max(d) / max(list)', summary: 'Largest value.' },
@@ -1089,6 +1109,29 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 					dim: d.dim,
 					scalar: reducePercentile(d.samples as Float64Array, qq)
 				},
+				d.unitHint
+			);
+		}
+		// interval(d, level): the central [lo, hi] band at a confidence level, as a
+		// 2-element list — sugar for [p(d, (1−level)/2), p(d, (1+level)/2)]. This
+		// *extracts* a band from a simulated result; the ci(...) constructor, which
+		// *builds* a distribution from a band, is left untouched. Level defaults to
+		// the sheet confidence. Returns a list, so it composes with min/max/etc.
+		case 'interval': {
+			if (args.length !== 1 && args.length !== 2)
+				throw new Error('interval(d, level) — e.g. interval(x, 0.9)');
+			const d = ev(0);
+			if (d.list) throw new Error('interval() is for distributions, not lists');
+			let level = ctx.fns.level;
+			if (args.length === 2) {
+				const lvl = ev(1);
+				requireDimless(lvl, 'interval level');
+				level = scalarParam(lvl, 'level');
+			}
+			if (!(level > 0 && level < 1)) throw new Error('interval: level must be between 0 and 1');
+			const tail = (1 - level) / 2;
+			return withHint(
+				{ dim: d.dim, list: [percentileOf(d, tail), percentileOf(d, 1 - tail)] },
 				d.unitHint
 			);
 		}

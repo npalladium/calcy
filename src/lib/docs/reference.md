@@ -367,6 +367,7 @@ Reserved words — don’t use them as variable names.
 | `skew(d)` | Asymmetry (Fisher–Pearson): positive = upside tail. Sample skew is high-variance. |
 | `sd(d)` _(alias: `stdev`)_ | Standard deviation. |
 | `p(d, q)` _(alias: `percentile`)_ | The q-quantile, q in 0…1. |
+| `interval(d, level)` | The central [lo, hi] band at a confidence level, as a 2-element list. |
 | `min(d) / min(list)` | Smallest value. |
 | `max(d) / max(list)` | Largest value. |
 | `sum(list) / sum(above)` | Total of a list, or of preceding result lines. |

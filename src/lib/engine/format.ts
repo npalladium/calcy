@@ -2,7 +2,7 @@
 // a pinned unit (from `in`/`to`) or falling back to the dimension signature.
 
 import type { PinnedUnit } from './eval';
-import type { DistSummary, Summary } from './mc';
+import type { DistSummary, ListSummary, Summary } from './mc';
 import { type Dimension, dimToString } from './value';
 
 // Currency symbols indexed by base-dim key. Only units whose dim matches one
@@ -209,6 +209,18 @@ export function formatSummary(
 	// as-expression works). The formatted display lives in `text` via
 	// formatNumber — that's where the user-facing K/M/B suffix kicks in.
 	const numeric = (n: number) => String(scaled(n, pinned));
+	if (summary.kind === 'list') {
+		const l = summary as ListSummary;
+		// Two values read as a `lo … hi` band; a longer list as a comma list.
+		const sep = l.list.length === 2 ? ' … ' : ', ';
+		const parts = l.list.map((n) =>
+			sym ? formatMoney(scaled(n, pinned), sym) : formatNumber(scaled(n, pinned), fmt)
+		);
+		// `value` stays machine-parseable: the raw scaled numbers, comma-joined.
+		const value = l.list.map((n) => numeric(n)).join(', ');
+		const text = `[${parts.join(sep)}]${sym ? '' : suffix}`;
+		return { kind: 'point', unit, baseUnit, value, text };
+	}
 	if (summary.kind === 'point') {
 		const value = numeric(summary.value);
 		// `text` follows the user's format preference; the `value` field stays

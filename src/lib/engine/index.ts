@@ -253,7 +253,9 @@ export class Engine {
 						this.opts.numberFormat,
 						this.opts.confidence
 					);
-					const isRate = (value.dim.time ?? 0) === -1;
+					// A list result (e.g. interval(...)) is never a rate — it has no
+					// single magnitude to re-express across time bases.
+					const isRate = !value.list && (value.dim.time ?? 0) === -1;
 					const res: LineResult = {
 						index,
 						kind: 'value',
@@ -351,7 +353,7 @@ export class Engine {
 	// Full per-period stats for a distribution line (datagrid panel).
 	statsTable(index: number): { label: string; value: string }[] | null {
 		const v = this.lineValues[index];
-		if (!v || v.scalar != null) return null;
+		if (!v || v.scalar != null || v.list) return null;
 		const s = summarize(v) as Extract<Summary, { kind: 'dist' }>;
 		const f = this.opts.numberFormat;
 		return [
