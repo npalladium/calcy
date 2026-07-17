@@ -1,6 +1,7 @@
 // AST evaluator: walks nodes to Values, with the scalar fast path and lazy
 // broadcast to samples only when a value meets a distribution.
 
+import { resolveAxes } from './axis';
 import {
 	analyticalMean,
 	analyticalMode,
@@ -150,6 +151,49 @@ const scalarParam = (v: Value, what: string): number => {
 	if (v.scalar == null) throw new Error(`${what} must be a deterministic scalar`);
 	return v.scalar;
 };
+
+// ---- scenario grids ----
+
+// Cap on the number of cells a single scenario value may hold. Aligned axes
+// don't multiply, but crosses do; past this the grid stops being a readable
+// table, so it's a hard error naming the axes rather than a silent subset.
+const MAX_CELLS = 256;
+
+// A value's cells as a flat array: the grid's own cells, or itself as one cell
+// when it has no axes (so a plain value broadcasts against a grid).
+const cellsOf = (v: Value): Value[] => (v.axes ? (v.cells ?? []) : [v]);
+
+// Re-wrap freshly-computed cells into a grid over `axes`, carrying a shared
+// display hint when every cell agrees on one (so the grid renders in the unit
+// the cells carry).
+function makeGrid(axes: Axis[], cells: Value[]): Value {
+	const grid: Value = { dim: cells[0].dim, axes, cells };
+	const h0 = cells[0].unitHint;
+	const shared =
+		h0 && cells.every((c) => c.unitHint?.label === h0.label && c.unitHint?.factor === h0.factor)
+			? h0
+			: undefined;
+	return shared ? withHint(grid, shared) : grid;
+}
+
+// Apply a unary op to every cell of a grid (`-scenario`, `scenario ^ 2`).
+function mapCells(v: Value, fn: (cell: Value) => Value): Value {
+	return makeGrid(v.axes as Axis[], cellsOf(v).map(fn));
+}
+
+// Resolve two operands' axes (align/broadcast/cross), then apply the scalar op
+// to each pair of cells. At least one operand carries axes.
+function resolveAxisBinop(a: Value, b: Value, perCell: (x: Value, y: Value) => Value): Value {
+	const { axes, leftIndex, rightIndex } = resolveAxes(a.axes ?? [], b.axes ?? []);
+	if (leftIndex.length > MAX_CELLS)
+		throw new Error(
+			`scenario grid too large: ${leftIndex.length} cells over ${axes.map((x) => x.name).join(' × ')} (cap ${MAX_CELLS})`
+		);
+	const aCells = cellsOf(a);
+	const bCells = cellsOf(b);
+	const cells = leftIndex.map((li, k) => perCell(aCells[li], bCells[rightIndex[k]]));
+	return makeGrid(axes, cells);
+}
 
 // Fold-based min/max. `Math.min(...arr)` spreads every element as a call
 // argument and overflows the call stack for large arrays (the default sample
@@ -1312,10 +1356,12 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 			return evalCall(node, ctx);
 		case 'neg': {
 			const v = evalNode(node.operand, ctx);
-			return withHint(
-				unaryMap(v, (x) => -x, v.dim),
-				v.unitHint
-			);
+			const neg = (x: Value) =>
+				withHint(
+					unaryMap(x, (m) => -m, x.dim),
+					x.unitHint
+				);
+			return v.axes ? mapCells(v, neg) : neg(v);
 		}
 		case 'ci': {
 			const lo = evalNode(node.lo, ctx);
@@ -1420,16 +1466,10 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 						`scenario coord '${node.coords[i].label}' has different units (${dimToString(cells[i].dim) || 'number'} vs ${dimToString(dim) || 'number'})`
 					);
 			}
+			if (cells.some((c) => c.axes))
+				throw new Error('a scenario coord cannot itself be a scenario');
 			const axis: Axis = { name: node.axis, coords: node.coords.map((c) => c.label) };
-			// Carry a display hint only when every cell agrees on it, so the grid
-			// renders in the unit the author typed on the coords.
-			const h0 = cells[0].unitHint;
-			const sharedHint =
-				h0 && cells.every((c) => c.unitHint?.label === h0.label && c.unitHint?.factor === h0.factor)
-					? h0
-					: undefined;
-			const scenario: Value = { dim, axes: [axis], cells };
-			return sharedHint ? withHint(scenario, sharedHint) : scenario;
+			return makeGrid([axis], cells);
 		}
 		case 'range': {
 			// `lo..hi [step k]`. lo/hi/step are dimensionless scalars. The default
@@ -1505,117 +1545,128 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 			return withHint(inner, hint);
 		}
 		case 'bin': {
-			const n = ctx.fns.N;
 			if (node.op === '^') {
 				const base = evalNode(node.left, ctx);
 				const exp = evalNode(node.right, ctx);
 				requireDimless(exp, 'exponent');
+				if (exp.axes) throw new Error('a scenario cannot be used as an exponent');
 				const p = scalarParam(exp, 'exponent');
-				return unaryMap(base, (x) => x ** p, dimPow(base.dim, p));
+				const pow = (v: Value) => unaryMap(v, (x) => x ** p, dimPow(v.dim, p));
+				return base.axes ? mapCells(base, pow) : pow(base);
 			}
+			const op = node.op; // narrowed to exclude '^'; const keeps it so in the closure
 			const a = evalNode(node.left, ctx);
 			const b = evalNode(node.right, ctx);
+			// Scenario grids resolve axis-by-axis (align/broadcast/cross), then apply
+			// the ordinary scalar op cell-by-cell. A plain (axis-free) pair skips
+			// straight to the scalar path — zero overhead for today's values.
+			if (a.axes || b.axes) return resolveAxisBinop(a, b, (x, y) => binScalar(op, x, y, ctx));
+			return binScalar(op, a, b, ctx);
+		}
+	}
+}
 
-			// Display-unit hint for ordinary arithmetic: +/- keep a shared unit
-			// (left wins on a tie, e.g. `5 km + 3 mi` → km); */÷ compose the typed
-			// units unless a dimension cancels. Comparisons and the affine/log/temp
-			// paths below carry no hint.
-			const arithHint =
-				node.op === '+' || node.op === '-'
-					? (a.unitHint ?? b.unitHint)
-					: node.op === '*' || node.op === '/'
-						? composeHint(node.op, a, b)
-						: undefined;
+// The scalar/sample binary-op path: everything except `^` (handled inline) and
+// axis resolution (handled by resolveAxisBinop, which calls back into this per
+// cell). Operands here never carry axes.
+function binScalar(
+	op: '+' | '-' | '*' | '/' | '<' | '>' | '<=' | '>=',
+	a: Value,
+	b: Value,
+	ctx: EvalCtx
+): Value {
+	const n = ctx.fns.N;
+	// Display-unit hint for ordinary arithmetic: +/- keep a shared unit
+	// (left wins on a tie, e.g. `5 km + 3 mi` → km); */÷ compose the typed
+	// units unless a dimension cancels. Comparisons and the affine/log/temp
+	// paths below carry no hint.
+	const arithHint =
+		op === '+' || op === '-'
+			? (a.unitHint ?? b.unitHint)
+			: op === '*' || op === '/'
+				? composeHint(op, a, b)
+				: undefined;
 
-			// Affine magnitude: `20 °C` is `20 * °C`, but an offset unit isn't
-			// multiplicative — apply `magnitude·scale + offset` to land an absolute
-			// value in base units, tagged `abs`. Works for a scalar or a whole
-			// distribution magnitude (`(20 to 30) °C`). The affine tag is consumed.
-			if (node.op === '*') {
-				if (b.affine && a.affine == null) return applyAffine(a, b.affine, b.dim);
-				if (a.affine && b.affine == null) return applyAffine(b, a.affine, a.dim);
-				// Logarithmic magnitude: `20 dBm` is `20 * dBm`, applied as
-				// `ref·10^(magnitude/factor)` to land a linear base-unit value.
-				if (b.log && a.log == null) return applyLog(a, b.log, b.dim);
-				if (a.log && b.log == null) return applyLog(b, a.log, a.dim);
-			}
+	// Affine magnitude: `20 °C` is `20 * °C`, but an offset unit isn't
+	// multiplicative — apply `magnitude·scale + offset` to land an absolute
+	// value in base units, tagged `abs`. Works for a scalar or a whole
+	// distribution magnitude (`(20 to 30) °C`). The affine tag is consumed.
+	if (op === '*') {
+		if (b.affine && a.affine == null) return applyAffine(a, b.affine, b.dim);
+		if (a.affine && b.affine == null) return applyAffine(b, a.affine, a.dim);
+		// Logarithmic magnitude: `20 dBm` is `20 * dBm`, applied as
+		// `ref·10^(magnitude/factor)` to land a linear base-unit value.
+		if (b.log && a.log == null) return applyLog(a, b.log, b.dim);
+		if (a.log && b.log == null) return applyLog(b, a.log, a.dim);
+	}
 
-			// Temperature absolute-vs-difference algebra. Fires only when at least
-			// one operand carries a temp tag, so plain `K` arithmetic is unchanged.
-			const tempRes = tempAlgebra(node.op, a, b);
-			if (tempRes) return tempRes;
+	// Temperature absolute-vs-difference algebra. Fires only when at least
+	// one operand carries a temp tag, so plain `K` arithmetic is unchanged.
+	const tempRes = tempAlgebra(op, a, b);
+	if (tempRes) return tempRes;
 
-			// Try a closed-form path before sampling. When both operands carry
-			// a parametric identity (or one is a scalar in the right slot), the
-			// result is itself a known family — propagate `meta` so downstream
-			// operations (mean, p) read the exact analytical value, not the
-			// sample noise. We still run the sample-path after this so the
-			// display (p5/p95/sd/sparkline) has data to render; the closed-
-			// form layer reads `meta` first when present, so the samples are
-			// inert for analytical consumers.
-			if (node.op === '+' || node.op === '-' || node.op === '*' || node.op === '/') {
-				if ((node.op === '+' || node.op === '-') && !dimEq(a.dim, b.dim))
-					throw new Error(
-						`incompatible dimensions: ${dimToString(a.dim) || 'number'} ${node.op} ${dimToString(b.dim) || 'number'}`
-					);
-				const outDim =
-					node.op === '*' ? dimMul(a.dim, b.dim) : node.op === '/' ? dimDiv(a.dim, b.dim) : a.dim;
-				const cf = closedFormBinop(node.op, a, b, outDim);
-				if (cf?.meta) {
-					// Compute samples from the closed-form distribution so
-					// display (sparkline, p5/p95) still works. When the
-					// inputs are themselves distributions, we *derive* the
-					// output samples elementwise from the inputs to preserve
-					// correlation-by-reuse (x + x ≡ 2x, sensitivity detects
-					// a's effect on a*b, etc.). The meta rides alongside so
-					// analytical reads (mean, p) stay exact regardless.
-					return withHint(
-						sampleFromMeta(cf as Value & { meta: ValueMeta }, ctx, node.op, a, b),
-						arithHint
-					);
-				}
-			}
+	// Try a closed-form path before sampling. When both operands carry
+	// a parametric identity (or one is a scalar in the right slot), the
+	// result is itself a known family — propagate `meta` so downstream
+	// operations (mean, p) read the exact analytical value, not the
+	// sample noise. We still run the sample-path after this so the
+	// display (p5/p95/sd/sparkline) has data to render; the closed-
+	// form layer reads `meta` first when present, so the samples are
+	// inert for analytical consumers.
+	if (op === '+' || op === '-' || op === '*' || op === '/') {
+		if ((op === '+' || op === '-') && !dimEq(a.dim, b.dim))
+			throw new Error(
+				`incompatible dimensions: ${dimToString(a.dim) || 'number'} ${op} ${dimToString(b.dim) || 'number'}`
+			);
+		const outDim = op === '*' ? dimMul(a.dim, b.dim) : op === '/' ? dimDiv(a.dim, b.dim) : a.dim;
+		const cf = closedFormBinop(op, a, b, outDim);
+		if (cf?.meta) {
+			// Compute samples from the closed-form distribution so
+			// display (sparkline, p5/p95) still works. When the
+			// inputs are themselves distributions, we *derive* the
+			// output samples elementwise from the inputs to preserve
+			// correlation-by-reuse (x + x ≡ 2x, sensitivity detects
+			// a's effect on a*b, etc.). The meta rides alongside so
+			// analytical reads (mean, p) stay exact regardless.
+			return withHint(sampleFromMeta(cf as Value & { meta: ValueMeta }, ctx, op, a, b), arithHint);
+		}
+	}
 
-			switch (node.op) {
-				case '+':
-					return withHint(
-						binop(a, b, (x, y) => x + y, a.dim, n),
-						arithHint
-					);
-				case '-':
-					return withHint(
-						binop(a, b, (x, y) => x - y, a.dim, n),
-						arithHint
-					);
-				case '*':
-					return withHint(
-						binop(a, b, (x, y) => x * y, dimMul(a.dim, b.dim), n),
-						arithHint
-					);
-				case '/':
-					return withHint(
-						binop(a, b, (x, y) => x / y, dimDiv(a.dim, b.dim), n),
-						arithHint
-					);
-				case '<':
-				case '>':
-				case '<=':
-				case '>=': {
-					if (!dimEq(a.dim, b.dim))
-						throw new Error(
-							`cannot compare ${dimToString(a.dim) || 'number'} with ${dimToString(b.dim) || 'number'}`
-						);
-					const cmp =
-						node.op === '<'
-							? (x: number, y: number) => (x < y ? 1 : 0)
-							: node.op === '>'
-								? (x: number, y: number) => (x > y ? 1 : 0)
-								: node.op === '<='
-									? (x: number, y: number) => (x <= y ? 1 : 0)
-									: (x: number, y: number) => (x >= y ? 1 : 0);
-					return binop(a, b, cmp, {}, n);
-				}
-			}
+	switch (op) {
+		case '+':
+			return withHint(
+				binop(a, b, (x, y) => x + y, a.dim, n),
+				arithHint
+			);
+		case '-':
+			return withHint(
+				binop(a, b, (x, y) => x - y, a.dim, n),
+				arithHint
+			);
+		case '*':
+			return withHint(
+				binop(a, b, (x, y) => x * y, dimMul(a.dim, b.dim), n),
+				arithHint
+			);
+		case '/':
+			return withHint(
+				binop(a, b, (x, y) => x / y, dimDiv(a.dim, b.dim), n),
+				arithHint
+			);
+		default: {
+			if (!dimEq(a.dim, b.dim))
+				throw new Error(
+					`cannot compare ${dimToString(a.dim) || 'number'} with ${dimToString(b.dim) || 'number'}`
+				);
+			const cmp =
+				op === '<'
+					? (x: number, y: number) => (x < y ? 1 : 0)
+					: op === '>'
+						? (x: number, y: number) => (x > y ? 1 : 0)
+						: op === '<='
+							? (x: number, y: number) => (x <= y ? 1 : 0)
+							: (x: number, y: number) => (x >= y ? 1 : 0);
+			return binop(a, b, cmp, {}, n);
 		}
 	}
 }
