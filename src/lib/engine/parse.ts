@@ -42,8 +42,7 @@ export type Node =
   | { type: 'where'; body: Node; bindings: { name: string; value: Node }[] }
   // `scenario[axis](low: e, base: e, high: e)` — the inline scenario
   // constructor: a value carrying one named axis whose coords are labelled
-  // expressions. Shorthand for a one-row scenario table. See
-  // docs/plans/scenarios.md.
+  // expressions. Shorthand for a one-row scenario table.
   | { type: 'scenario'; axis: string; coords: { label: string; value: Node }[] }
   // A double-quoted string literal. Only valid as a `pick(...)` coord label;
   // the evaluator errors if one appears anywhere a value is expected.

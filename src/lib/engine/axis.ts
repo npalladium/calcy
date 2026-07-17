@@ -1,7 +1,6 @@
 // Scenario axis resolution: given the axes of two operands, work out the result
 // axes and, for each result cell, which cell of each operand feeds it. Pure
-// combinatorics over `Axis` — no Value/sample knowledge. See
-// docs/plans/scenarios.md ("Alignment rules").
+// combinatorics over `Axis` — no Value/sample knowledge.
 //
 // The three cases collapse to one rule on the *names* the author typed:
 //   - same name in both  → align (zip): coords must match exactly, one shared
