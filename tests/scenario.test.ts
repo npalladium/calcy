@@ -4,7 +4,7 @@ import { num, one, values } from './helpers';
 
 // scenario[axis](label: expr, …) — the inline constructor. A value gains one
 // named axis whose coords are labelled expressions; each coord holds a full
-// scalar/distribution cell. See docs/plans/scenarios.md.
+// scalar/distribution cell.
 
 const scenarioOf = (src: string): ScenarioSummary => {
   const l = one(src);

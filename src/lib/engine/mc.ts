@@ -1,7 +1,7 @@
 // Monte Carlo layer: seeded RNG, distribution constructors, summaries.
 // All distributions are N samples; arithmetic is elementwise (in eval.ts).
 
-import { sampleSkewness } from './stats-adapter';
+import { normalInverseCdf, sampleSkewness } from './stats-adapter';
 import type { Axis, Value } from './value';
 
 // Two-sided quantile for a confidence level in (0, 1). For a CI that captures
@@ -98,6 +98,55 @@ export function gamma(z: number): number {
   for (let i = 1; i < LANCZOS_G + 2; i++) x += LANCZOS_C[i] / (z + i);
   const t = z + LANCZOS_G + 0.5;
   return Math.sqrt(2 * Math.PI) * t ** (z + 0.5) * Math.exp(-t) * x;
+}
+
+// ---- correlation (Iman–Conover, one reference held fixed) ----
+
+// Ascending 0-based rank of every element (ties broken by index, so the result
+// is always a permutation of 0..n-1).
+function ranks(a: Float64Array): Int32Array {
+  const idx = Array.from({ length: a.length }, (_, i) => i);
+  idx.sort((p, q) => a[p] - a[q] || p - q);
+  const rank = new Int32Array(a.length);
+  for (let k = 0; k < idx.length; k++) rank[idx[k]] = k;
+  return rank;
+}
+
+// Van der Waerden normal scores of a sample's ranks: Φ⁻¹(rank / (n + 1)). A
+// rank-based, marginal-free transform to an approximately-standard-normal
+// column — the reference score Iman–Conover correlates against.
+function normalScores(a: Float64Array): Float64Array {
+  const rank = ranks(a);
+  const n = a.length;
+  const out = new Float64Array(n);
+  for (let i = 0; i < n; i++) out[i] = normalInverseCdf((rank[i] + 1) / (n + 1));
+  return out;
+}
+
+// Reorder `y` so its rank correlation with the fixed reference `x` is
+// approximately `r`, **preserving y's marginal exactly** — the result is a
+// permutation of y, so every value (and thus mean/quantiles/shape) is
+// unchanged; only the pairing across the two arrays moves. Iman–Conover with a
+// single reference held fixed: build a target column `r·score(x) + √(1−r²)·z`
+// from fresh independent normals `z`, then assign y's order-statistics to match
+// the target's ranks. Downstream `x * y` is then correlated via the engine's
+// correlation-by-reuse. Requires equal-length sample arrays and |r| < 1.
+export function correlateTo(
+  x: Float64Array,
+  y: Float64Array,
+  r: number,
+  fns: DistFns
+): Float64Array {
+  const n = x.length;
+  const nx = normalScores(x);
+  const s = Math.sqrt(1 - r * r);
+  const target = new Float64Array(n);
+  for (let i = 0; i < n; i++) target[i] = r * nx[i] + s * fns.gaussian();
+  const tr = ranks(target); // desired order-statistic slot for each position
+  const sortedY = Float64Array.from(y).sort();
+  const out = new Float64Array(n);
+  for (let i = 0; i < n; i++) out[i] = sortedY[tr[i]];
+  return out;
 }
 
 // ---- distribution constructors (all return base-unit sample arrays) ----
@@ -356,8 +405,7 @@ export interface ListSummary {
 
 // A scenario-valued result: a grid of labelled cells over one or more axes.
 // Each cell is summarized independently (a point/dist/list), so the display
-// layer renders each in the same way it renders a plain line. See
-// docs/plans/scenarios.md.
+// layer renders each in the same way it renders a plain line.
 export interface ScenarioSummary {
   kind: 'scenario';
   dim: Value['dim'];

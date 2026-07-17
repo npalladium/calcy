@@ -11,7 +11,7 @@ export type Dimension = Record<string, number>;
 // A scenario axis: a named, ordered set of labelled coordinates. A value gains
 // one or more axes (see `Value.axes`); each axis multiplies the value's shape
 // into a grid of `cells`. Distinct from `dim` (units) and from `list` (a
-// reducer input) — an axis is labelled *output*. See docs/plans/scenarios.md.
+// reducer input) — an axis is labelled *output*.
 export interface Axis {
   name: string; // 'case', 'geo', …
   coords: string[]; // ordered labels: ['low', 'base', 'high']
@@ -76,7 +76,7 @@ export interface Value {
   // holds `cells` (one full Value per coord-combination, row-major over `axes`)
   // instead of its own scalar/samples. A value with no `axes` is exactly
   // today's scalar/samples value (zero-cost). Every cell shares this value's
-  // `dim`. See docs/plans/scenarios.md.
+  // `dim`.
   axes?: Axis[];
   cells?: Value[]; // row-major over `axes`; length = ∏ axes[i].coords.length
 }

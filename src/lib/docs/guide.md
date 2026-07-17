@@ -68,6 +68,41 @@ mean(revenue)               # the average
 median(visitors)            # the middle value
 ```
 
+### Compare a few scenarios
+
+Sometimes you don't have one number—you have a few named cases you want to see
+side by side. `scenario[name](...)` holds them all at once, and any maths you do
+carries every case through:
+
+```
+price = scenario[case](low: 8, base: 10, high: 14) $   # → case: low=$8.00, base=$10.00, high=$14.00
+demand = scenario[case](low: 1200, base: 1000, high: 700)   # → case: low=1.2K, base=1K, high=700
+revenue = price * demand   # → case: low=$9,600.00, base=$10,000.00, high=$9,800.00
+```
+
+Pull out one case with `pick`, or collapse them all with a reducer and `over`:
+
+```
+mid = pick(revenue, case = "base")   # → $10,000.00
+best = max(revenue over case)   # → $10,000.00
+```
+
+### When two things move together
+
+If two uncertain numbers tend to rise and fall together—or push against each
+other—`correlate` links them, so the connection shows up in whatever you compute
+next:
+
+```
+sales = normal(1000, 200)
+fee = correlate(sales, normal(20, 5), -0.6)   # busier days tend to mean a lower fee
+takings = sales * fee
+```
+
+The last number (−1 to 1) is how tightly they move: `0.6` together, `-0.6`
+apart, `0` not at all. Each keeps its own shape—only the pairing between them
+changes.
+
 ### Rates over time
 
 A value measured *per unit of time*—`12k req/s`, `$200/day`, `30 MB/s`—is a **rate**.
