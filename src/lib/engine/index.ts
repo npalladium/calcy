@@ -187,7 +187,8 @@ export class Engine {
     const lines: LineResult[] = new Array(rawLines.length);
     let i = 0;
     while (i < rawLines.length) {
-      if (blockHeaderKind(rawLines[i]) === 'correlate') {
+      const header = blockHeader(rawLines[i]);
+      if (header) {
         const headerIndent = indentOf(rawLines[i]);
         let j = i + 1;
         // Body runs until the first non-blank, non-comment line indented at or
@@ -197,7 +198,10 @@ export class Engine {
           if (t === '' || t.startsWith('#') || indentOf(rawLines[j]) > headerIndent) j++;
           else break;
         }
-        const group = this.evalCorrelateBlock(i, j, rawLines, ctx);
+        const group =
+          header.kind === 'correlate'
+            ? this.evalCorrelateBlock(i, j, rawLines, ctx)
+            : this.evalScenarioBlock(i, j, rawLines, ctx, header.axis);
         for (let k = i; k < j; k++) lines[k] = group[k - i];
         i = j;
       } else {
@@ -355,6 +359,89 @@ export class Engine {
           ...toError(new Error(headerError))
         }
       : { index: headerIndex, kind: 'unitdef', raw: rawLines[headerIndex], name: 'correlate' };
+    const out: LineResult[] = [];
+    for (let idx = headerIndex; idx < bodyEnd; idx++)
+      out.push(idx === headerIndex ? header : (results.get(idx) as LineResult));
+    return out;
+  }
+
+  // Evaluate a `scenario <axis>:` table spanning physical lines
+  // [headerIndex, bodyEnd). The first non-blank body line must be a `# coordA
+  // coordB …` header naming the axis coords; each subsequent `name = c1 c2 …
+  // [unit]` row desugars to the inline scenario[axis](…) constructor (cells are
+  // split on runs of two or more spaces, so a cell may hold a spaced expression
+  // like `1 to 10`; a trailing token beyond the coord count is a shared unit
+  // applied to every cell). Rows leak to the sheet and, sharing one axis, zip.
+  private evalScenarioBlock(
+    headerIndex: number,
+    bodyEnd: number,
+    rawLines: string[],
+    ctx: EvalCtx,
+    axis: string
+  ): LineResult[] {
+    const results = new Map<number, LineResult>();
+    let coords: string[] | null = null;
+
+    for (let idx = headerIndex + 1; idx < bodyEnd; idx++) {
+      const raw = rawLines[idx];
+      const hash = raw.indexOf('#');
+      const code = (hash >= 0 ? raw.slice(0, hash) : raw).trim();
+      const afterHash = hash >= 0 ? raw.slice(hash + 1).trim() : '';
+      if (code === '') {
+        // The first `# …` line is the coord header; later ones are comments.
+        if (hash >= 0 && coords == null) {
+          coords = afterHash.split(/\s+/).filter(Boolean);
+          if (coords.length === 0) coords = null;
+          results.set(idx, { index: idx, kind: 'comment', raw });
+          continue;
+        }
+        results.set(idx, { index: idx, kind: hash >= 0 ? 'comment' : 'blank', raw });
+        continue;
+      }
+      const rowMatch = /^([A-Za-z_$€µ][\w$€µ]*)\s*=\s*(.+)$/.exec(code);
+      if (!rowMatch) {
+        results.set(idx, {
+          index: idx,
+          kind: 'value',
+          raw,
+          ...toError(new Error('scenario row must be `name = cell cell …`'))
+        });
+        continue;
+      }
+      const [, name, rhs] = rowMatch;
+      const comment = hash >= 0 ? afterHash : undefined;
+      try {
+        if (coords == null)
+          throw new Error('scenario table needs a coord header row first, e.g. `# low base high`');
+        const tokens = rhs
+          .trim()
+          .split(/\s{2,}/)
+          .filter(Boolean);
+        if (tokens.length !== coords.length && tokens.length !== coords.length + 1)
+          throw new Error(
+            `scenario row '${name}' has ${tokens.length} cell(s) but the axis has ${coords.length} coord(s)`
+          );
+        const unit = tokens.length > coords.length ? tokens[coords.length] : '';
+        const parts = coords.map((c, k) => `${c}: ${tokens[k]}${unit ? ` ${unit}` : ''}`);
+        const src = `${name} = scenario[${axis}](${parts.join(', ')})`;
+        const line = parseLine(src, { isUnit: (n) => this.units.has(n) });
+        if (line.type !== 'assign') throw new Error('scenario row did not parse as an assignment');
+        const { value, pinned } = evalRoot(line.expr, ctx);
+        ctx.env.set(name, value);
+        this.lineValues[idx] = value;
+        ctx.above.push(value);
+        results.set(idx, this.valueLine(idx, raw, name, comment, value, pinned, line.expr));
+      } catch (e) {
+        results.set(idx, { index: idx, kind: 'value', raw, name, comment, ...toError(e) });
+      }
+    }
+
+    const header: LineResult = {
+      index: headerIndex,
+      kind: 'unitdef',
+      raw: rawLines[headerIndex],
+      name: `scenario ${axis}`
+    };
     const out: LineResult[] = [];
     for (let idx = headerIndex; idx < bodyEnd; idx++)
       out.push(idx === headerIndex ? header : (results.get(idx) as LineResult));
@@ -593,12 +680,18 @@ function indentOf(raw: string): number {
   return m ? m[0].length : 0;
 }
 
-// Recognise a multi-line block header: a bare `correlate:` (trailing comment
-// allowed). Returns null for everything else, so ordinary lines are untouched.
-function blockHeaderKind(raw: string): 'correlate' | null {
+type BlockHeader = { kind: 'correlate' } | { kind: 'scenario'; axis: string };
+
+// Recognise a multi-line block header (trailing comment allowed): `correlate:`,
+// or `scenario:` / `scenario <axis>:` (the axis defaults to `case`). Returns
+// null for everything else, so ordinary lines are untouched.
+function blockHeader(raw: string): BlockHeader | null {
   const hash = raw.indexOf('#');
   const code = (hash >= 0 ? raw.slice(0, hash) : raw).trim();
-  return code === 'correlate:' ? 'correlate' : null;
+  if (code === 'correlate:') return { kind: 'correlate' };
+  const m = /^scenario(?:\s+([A-Za-z_]\w*))?\s*:$/.exec(code);
+  if (m) return { kind: 'scenario', axis: m[1] ?? 'case' };
+  return null;
 }
 
 function dimLabelOf(dim: Dimension): string {
