@@ -357,6 +357,7 @@ Reserved words — don’t use them as variable names.
 | `discrete(w1: v1, w2: v2, …)` | Weighted scenarios (or equal-weight from a list). |
 | `mixture(d1, d2, …)` | Equal-weight (or weighted) mix of like-dimensioned distributions. |
 | `ci(lo, hi[, level])` | Confidence interval as a function — the `lo to hi` form, with an optional level. |
+| `correlate(reference, marginal, r)` | Couple a marginal to an existing distribution at rank correlation r, preserving its marginal exactly. |
 
 **Reducers**
 

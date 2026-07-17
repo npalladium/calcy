@@ -14,6 +14,7 @@ import {
   betaSamples,
   binomialSamples,
   ciSamples,
+  correlateTo,
   type DistFns,
   exponentialSamples,
   lognormalSamples,
@@ -468,6 +469,13 @@ export const FUNCTIONS: FnDoc[] = [
     category: 'Distributions',
     sig: 'ci(lo, hi[, level])',
     summary: 'Confidence interval as a function — the `lo to hi` form, with an optional level.'
+  },
+  {
+    name: 'correlate',
+    category: 'Distributions',
+    sig: 'correlate(reference, marginal, r)',
+    summary:
+      'Couple a marginal to an existing distribution at rank correlation r, preserving its marginal exactly.'
   },
   // Reducers
   {
@@ -1092,6 +1100,40 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
         samples: binomialSamples(nV, pV, ctx.fns),
         meta: { kind: 'binomial', n: nV, p: pV }
       };
+    }
+    // correlate(reference, marginal, r): couple `marginal` to an already-drawn
+    // sample-based `reference` at rank correlation r, preserving the marginal
+    // exactly (Iman–Conover, reference fixed). The returned samples flow through
+    // correlation-by-reuse, so any later `reference * result` is correlated.
+    case 'correlate': {
+      if (args.length !== 3) throw new Error('correlate(reference, marginal, r)');
+      const ref = ev(0);
+      const marginal = ev(1);
+      const rArg = ev(2);
+      requireDimless(rArg, 'correlation r');
+      const r = scalarParam(rArg, 'r');
+      if (!(Math.abs(r) < 1))
+        throw new Error(
+          'correlate: r must satisfy |r| < 1 — express perfect coupling as a formula (e.g. b = -a)'
+        );
+      if (!ref.samples)
+        throw new Error(
+          'correlate: the reference must be a distribution (it has no samples to pair)'
+        );
+      if (!marginal.samples)
+        throw new Error(
+          'correlate: the marginal must be a distribution (it has no samples to reorder)'
+        );
+      // Reordering is a permutation, so the marginal's family identity (meta)
+      // and display unit still hold exactly — carry them through.
+      return withHint(
+        {
+          dim: marginal.dim,
+          samples: correlateTo(ref.samples, marginal.samples, r, ctx.fns),
+          ...(marginal.meta ? { meta: marginal.meta } : {})
+        },
+        marginal.unitHint
+      );
     }
     // discrete: pick value vᵢ with probability ∝ wᵢ — weighted scenario /
     // decision modelling. Prefer the pair form `discrete(w1: v1, w2: v2, …)`;
