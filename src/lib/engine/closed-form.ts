@@ -10,7 +10,7 @@
 // Every function here is total: if it can't reduce to a closed form, it
 // returns `null` and the caller falls back to the sample path.
 
-import type { DistFns } from './mc';
+import { type DistFns, gamma } from './mc';
 import { normalInverseCdf } from './stats-adapter';
 import type { Dimension, Value, ValueMeta } from './value';
 
@@ -109,6 +109,9 @@ export function analyticalMean(v: Value): number | null {
 			const m = v.meta.lo + ((v.meta.alpha - 1) * span) / 4;
 			return (v.meta.lo + 4 * m + v.meta.hi) / 6;
 		}
+		case 'weibull':
+			// E[X] = λ·Γ(1 + 1/k).
+			return v.meta.scale * gamma(1 + 1 / v.meta.shape);
 		default:
 			return null;
 	}
@@ -138,6 +141,8 @@ export function analyticalPercentile(v: Value, q: number): number | null {
 				return 0;
 			case 'beta':
 				return 0;
+			case 'weibull':
+				return 0;
 			default:
 				return null;
 		}
@@ -156,6 +161,8 @@ export function analyticalPercentile(v: Value, q: number): number | null {
 				return Infinity;
 			case 'beta':
 				return 1;
+			case 'weibull':
+				return Infinity;
 			default:
 				return null;
 		}
@@ -171,6 +178,9 @@ export function analyticalPercentile(v: Value, q: number): number | null {
 		case 'exponential':
 			// Q(q) = -mean · ln(1 − q)
 			return -v.meta.mean * Math.log(1 - q);
+		case 'weibull':
+			// Q(q) = λ·(−ln(1 − q))^(1/k) — the sampler's inverse CDF, exact.
+			return v.meta.scale * (-Math.log(1 - q)) ** (1 / v.meta.shape);
 		case 'beta':
 			// No closed form without the regularised incomplete beta function.
 			// simple-statistics doesn't ship one; we fall back to samples.

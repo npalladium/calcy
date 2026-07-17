@@ -27,7 +27,8 @@ export type ValueMeta =
 	| { kind: 'poisson'; lambda: number }
 	| { kind: 'beta'; a: number; b: number }
 	| { kind: 'triangular'; lo: number; mode: number; hi: number }
-	| { kind: 'pert'; alpha: number; beta: number; lo: number; hi: number };
+	| { kind: 'pert'; alpha: number; beta: number; lo: number; hi: number }
+	| { kind: 'weibull'; shape: number; scale: number };
 
 export interface Value {
 	dim: Dimension;

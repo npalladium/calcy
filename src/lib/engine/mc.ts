@@ -78,6 +78,28 @@ export interface DistFns {
 	level: number;
 }
 
+// Γ(z) via the Lanczos approximation (g = 7, n = 9 coefficients). The codebase
+// otherwise has only a gamma *sampler* (`gammaDraw`); the analytic moments of
+// the Weibull distribution need the gamma *function*, and simple-statistics
+// doesn't ship one. Accurate to ~15 significant figures for z > 0, which is far
+// tighter than the sample noise it sits beside. The reflection formula handles
+// z < 0.5 (unused by Weibull, whose arguments are always > 1, but kept so the
+// helper is correct in general).
+const LANCZOS_G = 7;
+const LANCZOS_C = [
+	0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+	-176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6,
+	1.5056327351493116e-7
+];
+export function gamma(z: number): number {
+	if (z < 0.5) return Math.PI / (Math.sin(Math.PI * z) * gamma(1 - z));
+	z -= 1;
+	let x = LANCZOS_C[0];
+	for (let i = 1; i < LANCZOS_G + 2; i++) x += LANCZOS_C[i] / (z + i);
+	const t = z + LANCZOS_G + 0.5;
+	return Math.sqrt(2 * Math.PI) * t ** (z + 0.5) * Math.exp(-t) * x;
+}
+
 // ---- distribution constructors (all return base-unit sample arrays) ----
 
 // CI lo..hi at fns.level. Both positive -> lognormal; spanning/≤0 -> normal.
@@ -201,6 +223,19 @@ export function poissonSamples(lambda: number, fns: DistFns): Float64Array {
 			out[i] = x < 0 ? 0 : x;
 		}
 	}
+	return out;
+}
+
+// Weibull(shape k, scale λ) by inverse-CDF: X = λ·(−ln(1−U))^(1/k). Using
+// (1 − U) keeps the log argument in (0, 1] (uniform() can return 0 but not 1),
+// so every draw is finite and non-negative. k = 1 is exactly exponential(λ);
+// k > 1 is the aging-failure workhorse, k < 1 the infant-mortality one.
+export function weibullSamples(shape: number, scale: number, fns: DistFns): Float64Array {
+	if (!(shape > 0)) throw new Error('weibull requires a positive shape');
+	if (!(scale > 0)) throw new Error('weibull requires a positive scale');
+	const out = new Float64Array(fns.N);
+	const inv = 1 / shape;
+	for (let i = 0; i < fns.N; i++) out[i] = scale * (-Math.log(1 - fns.uniform())) ** inv;
 	return out;
 }
 
@@ -396,6 +431,14 @@ export function summarize(v: Value, level = 0.9): Summary {
 				// Var of Beta(α,β) on the unit interval is μ₁(μ₂−μ₁); the
 				// four-parameter PERT scales it by the span², so sd = span·√(…).
 				sd = (v.meta.hi - v.meta.lo) * Math.sqrt(mu1 * (mu2 - mu1));
+				break;
+			}
+			case 'weibull': {
+				// mean = λ·Γ(1 + 1/k); var = λ²·(Γ(1 + 2/k) − Γ(1 + 1/k)²).
+				const g1 = gamma(1 + 1 / v.meta.shape);
+				const g2 = gamma(1 + 2 / v.meta.shape);
+				mean = v.meta.scale * g1;
+				sd = v.meta.scale * Math.sqrt(g2 - g1 * g1);
 				break;
 			}
 		}

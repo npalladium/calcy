@@ -22,6 +22,7 @@ import {
 	reduceSd,
 	triangularSamples,
 	uniformSamples,
+	weibullSamples,
 	zForLevel
 } from './mc';
 import type { CallArg, Node } from './parse';
@@ -276,6 +277,10 @@ const PARAMS: Record<string, string[][]> = {
 	],
 	exponential: [['mean']],
 	poisson: [['mean']],
+	weibull: [
+		['shape', 'k'],
+		['scale', 'lambda']
+	],
 	p: [
 		['dist', 'd'],
 		['q', 'p']
@@ -361,6 +366,12 @@ export const FUNCTIONS: FnDoc[] = [
 		category: 'Distributions',
 		sig: 'poisson(mean)',
 		summary: 'Whole count of events at the given mean rate.'
+	},
+	{
+		name: 'weibull',
+		category: 'Distributions',
+		sig: 'weibull(shape, scale)',
+		summary: 'Time-to-failure / reliability; scale carries the units, shape is dimensionless.'
 	},
 	{
 		name: 'discrete',
@@ -837,6 +848,26 @@ function evalCall(node: { name: string; args: CallArg[] }, ctx: EvalCtx): Value 
 				dim: mean.dim,
 				samples: poissonSamples(meanV, ctx.fns),
 				meta: { kind: 'poisson', lambda: meanV }
+			};
+		}
+		// weibull(shape, scale): time-to-failure / reliability. The scale carries
+		// the units (a duration for time-to-failure); the shape is a dimensionless
+		// knob — shape > 1 is aging failure, shape < 1 infant mortality, shape = 1
+		// is exponential. Keyword args (shape=, scale=) guard against the classic
+		// swapped-argument bug, since Weibull parameterizations differ across tools.
+		case 'weibull': {
+			if (args.length !== 2) throw new Error('weibull(shape, scale) — e.g. weibull(1.5, 200 day)');
+			const shape = ev(0);
+			const scale = ev(1);
+			requireDimless(shape, 'weibull shape');
+			const shapeV = scalarParam(shape, 'shape');
+			const scaleV = scalarParam(scale, 'scale');
+			if (!(shapeV > 0)) throw new Error('weibull: shape must be positive');
+			if (!(scaleV > 0)) throw new Error('weibull: scale must be positive');
+			return {
+				dim: scale.dim,
+				samples: weibullSamples(shapeV, scaleV, ctx.fns),
+				meta: { kind: 'weibull', shape: shapeV, scale: scaleV }
 			};
 		}
 		// discrete: pick value vᵢ with probability ∝ wᵢ — weighted scenario /
