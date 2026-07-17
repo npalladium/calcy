@@ -15,6 +15,12 @@ A pure, offline, installable PWA notepad that does three things at once:
 3. **Rate reasoning**—type a rate (`12k req/s`) and instantly see it per
    second…year, and **accumulate** it over any window into a total.
 
+Built on those: **scenarios**—`scenario[case](low: 8, base: 10, high: 14)` holds
+several labelled outcomes in one line and composes them through your whole sheet
+(`pick` one, or collapse with `max(… over case)`)—and **correlation**—
+`correlate(a, b, r)` couples two uncertain values at a target rank correlation so
+the dependency shows up in whatever you compute next.
+
 Everything runs client-side. No backend, no accounts, no telemetry, no network
 after install.
 
