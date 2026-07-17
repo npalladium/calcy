@@ -165,6 +165,33 @@ describe('formatSummary — distributions', () => {
 	});
 });
 
+describe('formatSummary — baseUnit (hover decomposition)', () => {
+	// baseUnit carries the canonical base-dimension signature for the hover
+	// tooltip. It is dimToString(dim), independent of any pinned display label,
+	// and absent for dimensionless values (an empty tooltip is noise).
+	it('is absent for a dimensionless value', () => {
+		expect(formatSummary(point(5)).baseUnit).toBeUndefined();
+	});
+	it('equals the display unit when nothing is pinned', () => {
+		expect(formatSummary(point(3, { length: 1 })).baseUnit).toBe('m');
+	});
+	it('shows the base decomposition under a pinned label', () => {
+		const out = formatSummary(point(5000, { length: 1 }), { label: 'km', factor: 1000 });
+		expect(out).toMatchObject({ unit: 'km', baseUnit: 'm' });
+	});
+	it('decomposes a pinned composite rate to base units', () => {
+		const out = formatSummary(point(10, { length: 1, time: -1 }), {
+			label: 'km/h',
+			factor: 1000 / 3600
+		});
+		expect(out).toMatchObject({ unit: 'km/h', baseUnit: 'm/s' });
+	});
+	it('is present on distributions too', () => {
+		const out = formatSummary(dist({ dim: { length: 1 }, min: 1, max: 9, p5: 2, p50: 5, p95: 8 }));
+		expect(out.baseUnit).toBe('m');
+	});
+});
+
 describe('formatSummary — money (auto-detected currency units)', () => {
 	// Currency units get $-prefixed, 2-decimal, thousands-separated display in
 	// the user-facing `text`. The numeric fields (value, p5, p50, p95) stay

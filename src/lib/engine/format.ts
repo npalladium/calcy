@@ -130,6 +130,12 @@ export function formatNumber(n: number, fmt: NumberFormat = 'auto'): string {
 export interface DisplayValue {
 	kind: 'point' | 'dist';
 	unit: string;
+	// Canonical base-dimension signature (dimToString(dim)) for the hover
+	// tooltip that decomposes the displayed unit — `km/h` → `m/s`, `mi` → `m`.
+	// Independent of the pinned display label in `unit`. Absent for a
+	// dimensionless value, where the decomposition is empty and a tooltip would
+	// be noise.
+	baseUnit?: string;
 	// point
 	value?: string;
 	// dist: raw, machine-parseable percentiles (Number()/clipboard/share rely on
@@ -189,6 +195,9 @@ export function formatSummary(
 	level?: number
 ): DisplayValue {
 	const unit = unitLabel(summary.dim, pinned);
+	// Base-dimension decomposition for the hover tooltip; empty (→ undefined) for
+	// a dimensionless value so the UI shows no tooltip.
+	const baseUnit = dimToString(summary.dim) || undefined;
 	const sym = moneySymbol(summary.dim, pinned);
 	// Money strings already include the symbol; skip the suffix so we don't
 	// render "$5.00 $". For composite pinned labels (e.g. `k$`), the label
@@ -207,7 +216,7 @@ export function formatSummary(
 		const text = sym
 			? formatMoney(scaled(summary.value, pinned), sym)
 			: `${formatNumber(scaled(summary.value, pinned), fmt)}${suffix}`;
-		return { kind: 'point', unit, value, text };
+		return { kind: 'point', unit, baseUnit, value, text };
 	}
 	const d = summary as DistSummary;
 	// A distribution with no spread (e.g. x - x via correlation-by-reuse) is an
@@ -217,7 +226,7 @@ export function formatSummary(
 		const text = sym
 			? formatMoney(scaled(d.min, pinned), sym)
 			: `${formatNumber(scaled(d.min, pinned), fmt)}${suffix}`;
-		return { kind: 'point', unit, value, text };
+		return { kind: 'point', unit, baseUnit, value, text };
 	}
 	const p5 = numeric(d.p5);
 	const p50 = numeric(d.p50);
@@ -256,6 +265,7 @@ export function formatSummary(
 	return {
 		kind: 'dist',
 		unit,
+		baseUnit,
 		p5,
 		p50,
 		p95,
