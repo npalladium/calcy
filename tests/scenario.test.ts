@@ -17,6 +17,24 @@ const scenarioOf = (src: string): ScenarioSummary => {
 const cellValues = (src: string): number[] =>
   scenarioOf(src).cells.map((c) => (c.kind === 'point' ? c.value : Number.NaN));
 
+describe('scenario(...) default axis', () => {
+  it('defaults the axis name to `case` when [axis] is omitted', () => {
+    const s = scenarioOf('scenario(low: 8, base: 10, high: 14)');
+    expect(s.axes[0].name).toBe('case');
+    expect(s.axes[0].coords).toEqual(['low', 'base', 'high']);
+    expect(s.cells.map((c) => (c.kind === 'point' ? c.value : Number.NaN))).toEqual([8, 10, 14]);
+  });
+
+  it('the default axis behaves like an explicit one (pick / over)', () => {
+    const last = (src: string): number => {
+      const ls = values(src);
+      return Number(ls[ls.length - 1].display?.value);
+    };
+    expect(last('p = scenario(low: 8, base: 10, high: 14)\npick(p, case = "high")')).toBe(14);
+    expect(last('p = scenario(low: 8, base: 10, high: 14)\nmax(p over case)')).toBe(14);
+  });
+});
+
 describe('scenario[axis](...) inline constructor', () => {
   it('builds a one-axis grid with the coords in author order', () => {
     const s = scenarioOf('scenario[case](low: 8, base: 10, high: 14)');
