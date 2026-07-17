@@ -34,6 +34,7 @@ import type { CallArg, Node } from './parse';
 import { normalInverseCdf } from './stats-adapter';
 import type { UnitDef } from './units';
 import {
+	type Axis,
 	type Dimension,
 	dimDiv,
 	dimEq,
@@ -1405,6 +1406,30 @@ export function evalNode(node: Node, ctx: EvalCtx): Value {
 				out.push(it.scalar as number);
 			}
 			return { dim, list: out };
+		}
+		case 'scenario': {
+			// Inline scenario constructor: evaluate each coord expression into a
+			// cell. Every cell must share one dim (an axis is orthogonal to units).
+			// The axis carries the coord labels in author order; cells are stored in
+			// the same order (row-major over the single axis).
+			const cells = node.coords.map((c) => evalNode(c.value, ctx));
+			const dim = cells[0].dim;
+			for (let i = 1; i < cells.length; i++) {
+				if (!dimEq(cells[i].dim, dim))
+					throw new Error(
+						`scenario coord '${node.coords[i].label}' has different units (${dimToString(cells[i].dim) || 'number'} vs ${dimToString(dim) || 'number'})`
+					);
+			}
+			const axis: Axis = { name: node.axis, coords: node.coords.map((c) => c.label) };
+			// Carry a display hint only when every cell agrees on it, so the grid
+			// renders in the unit the author typed on the coords.
+			const h0 = cells[0].unitHint;
+			const sharedHint =
+				h0 && cells.every((c) => c.unitHint?.label === h0.label && c.unitHint?.factor === h0.factor)
+					? h0
+					: undefined;
+			const scenario: Value = { dim, axes: [axis], cells };
+			return sharedHint ? withHint(scenario, sharedHint) : scenario;
 		}
 		case 'range': {
 			// `lo..hi [step k]`. lo/hi/step are dimensionless scalars. The default

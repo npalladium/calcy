@@ -2,7 +2,7 @@
 // a pinned unit (from `in`/`to`) or falling back to the dimension signature.
 
 import type { PinnedUnit } from './eval';
-import type { DistSummary, ListSummary, Summary } from './mc';
+import type { DistSummary, ListSummary, ScenarioSummary, Summary } from './mc';
 import { type Dimension, dimToString } from './value';
 
 // Currency symbols indexed by base-dim key. Only units whose dim matches one
@@ -128,7 +128,7 @@ export function formatNumber(n: number, fmt: NumberFormat = 'auto'): string {
 }
 
 export interface DisplayValue {
-	kind: 'point' | 'dist';
+	kind: 'point' | 'dist' | 'scenario';
 	unit: string;
 	// Canonical base-dimension signature (dimToString(dim)) for the hover
 	// tooltip that decomposes the displayed unit — `km/h` → `m/s`, `mi` → `m`.
@@ -152,6 +152,11 @@ export interface DisplayValue {
 	// min, p5, p25, median, p75, p95, max. The unit label is appended by the UI.
 	stats?: { label: string; value: string }[];
 	text: string; // combined one-line label
+	// scenario: the axes (name + coord labels) and one DisplayValue per cell,
+	// row-major over the axes. The display layer renders the grid; `text` is a
+	// compact one-line fallback (`case: low=8 $, base=10 $, …`).
+	axes?: { name: string; coords: string[] }[];
+	cells?: DisplayValue[];
 	// Active confidence level (the quantile range [pLower, pUpper] that
 	// the user picked via the sheet's `confidence` setting or a `ci(...)` call).
 	// The dist's p5/p25/p50/p75/p95 percentiles are always the literal
@@ -209,6 +214,24 @@ export function formatSummary(
 	// as-expression works). The formatted display lives in `text` via
 	// formatNumber — that's where the user-facing K/M/B suffix kicks in.
 	const numeric = (n: number) => String(scaled(n, pinned));
+	if (summary.kind === 'scenario') {
+		const s = summary as ScenarioSummary;
+		// Every cell shares this value's dim/unit, so the same pinned unit renders
+		// them all. The display layer draws the grid; `text` is a compact fallback.
+		const cells = s.cells.map((c) => formatSummary(c, pinned, fmt, level));
+		const single = s.axes.length === 1;
+		const labels = single ? s.axes[0].coords : cells.map((_, i) => String(i));
+		const body = cells.map((c, i) => `${labels[i]}=${c.text}`).join(', ');
+		const text = single ? `${s.axes[0].name}: ${body}` : body;
+		return {
+			kind: 'scenario',
+			unit,
+			baseUnit,
+			axes: s.axes.map((a) => ({ name: a.name, coords: a.coords })),
+			cells,
+			text
+		};
+	}
 	if (summary.kind === 'list') {
 		const l = summary as ListSummary;
 		// Two values read as a `lo … hi` band; a longer list as a comma list.

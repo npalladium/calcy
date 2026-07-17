@@ -39,7 +39,12 @@ export type Node =
 	// where `pred` (a 0/1 mask) holds.
 	| { type: 'given'; body: Node; pred: Node }
 	// `expr where a = …, b = …` — evaluate body with extra locals bound.
-	| { type: 'where'; body: Node; bindings: { name: string; value: Node }[] };
+	| { type: 'where'; body: Node; bindings: { name: string; value: Node }[] }
+	// `scenario[axis](low: e, base: e, high: e)` — the inline scenario
+	// constructor: a value carrying one named axis whose coords are labelled
+	// expressions. Shorthand for a one-row scenario table. See
+	// docs/plans/scenarios.md.
+	| { type: 'scenario'; axis: string; coords: { label: string; value: Node }[] };
 
 export type Line =
 	| { type: 'blank' }
@@ -904,6 +909,11 @@ class Parser {
 			return { type: 'list', items };
 		}
 		if (t.kind === 'ident') {
+			// `scenario[axis](label: expr, …)` — the inline scenario constructor.
+			// Detected by the `scenario` keyword immediately followed by `[`.
+			if (t.value === 'scenario' && this.toks[this.pos + 1]?.kind === 'lbrack') {
+				return this.parseScenario();
+			}
 			// Percentile spec: `p10: 5, p90: 50` fits a distribution to two named
 			// percentiles. Detected by a `pNN` ident immediately followed by `:`.
 			const next1 = this.toks[this.pos + 1];
@@ -941,6 +951,48 @@ class Parser {
 			return { type: 'ident', name: t.value };
 		}
 		throw new Error(`unexpected token '${t.value}'`);
+	}
+
+	// `scenario[axis](label: expr, …)`. The `scenario` keyword is at the cursor;
+	// axis and coord labels are always explicit (no positional/anonymous form).
+	private parseScenario(): Node {
+		this.next(); // 'scenario'
+		this.expect('lbrack');
+		const axisTok = this.peek();
+		if (axisTok?.kind !== 'ident')
+			throw new Error('scenario needs an axis name, e.g. scenario[case](low: 8, base: 10)');
+		this.next();
+		this.expect('rbrack');
+		this.expect('lparen');
+		const coords: { label: string; value: Node }[] = [];
+		if (this.peek()?.kind !== 'rparen') {
+			for (;;) {
+				const lt = this.peek();
+				if (lt?.kind !== 'ident') throw new Error('scenario coord needs a label, e.g. low: 8');
+				this.next();
+				const colon = this.peek();
+				if (!(colon?.kind === 'op' && colon.value === ':'))
+					throw new Error(
+						`scenario coord '${lt.value}' needs ':' then a value, e.g. ${lt.value}: 8`
+					);
+				this.next();
+				coords.push({ label: lt.value, value: this.parseExpr() });
+				if (this.peek()?.kind === 'comma') {
+					this.next();
+					continue;
+				}
+				break;
+			}
+		}
+		this.expect('rparen');
+		if (coords.length === 0) throw new Error('scenario needs at least one coord');
+		const seen = new Set<string>();
+		for (const c of coords) {
+			if (seen.has(c.label))
+				throw new Error(`scenario axis '${axisTok.value}': duplicate coord '${c.label}'`);
+			seen.add(c.label);
+		}
+		return { type: 'scenario', axis: axisTok.value, coords };
 	}
 
 	// Parse a call's argument list up to and including the closing paren (the

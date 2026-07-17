@@ -2,7 +2,7 @@
 // All distributions are N samples; arithmetic is elementwise (in eval.ts).
 
 import { sampleSkewness } from './stats-adapter';
-import type { Value } from './value';
+import type { Axis, Value } from './value';
 
 // Two-sided quantile for a confidence level in (0, 1). For a CI that captures
 // `level` of the mass, each tail holds (1 − level) / 2, and this is the z-score
@@ -354,7 +354,18 @@ export interface ListSummary {
 	dim: Value['dim'];
 }
 
-export type Summary = PointSummary | DistSummary | ListSummary;
+// A scenario-valued result: a grid of labelled cells over one or more axes.
+// Each cell is summarized independently (a point/dist/list), so the display
+// layer renders each in the same way it renders a plain line. See
+// docs/plans/scenarios.md.
+export interface ScenarioSummary {
+	kind: 'scenario';
+	dim: Value['dim'];
+	axes: Axis[];
+	cells: Summary[]; // row-major over `axes`
+}
+
+export type Summary = PointSummary | DistSummary | ListSummary | ScenarioSummary;
 
 function quantileSorted(sorted: Float64Array, p: number): number {
 	if (sorted.length === 1) return sorted[0];
@@ -386,6 +397,13 @@ export function histogram(
 }
 
 export function summarize(v: Value, level = 0.9): Summary {
+	if (v.axes)
+		return {
+			kind: 'scenario',
+			dim: v.dim,
+			axes: v.axes,
+			cells: (v.cells ?? []).map((c) => summarize(c, level))
+		};
 	if (v.list) return { kind: 'list', list: v.list, dim: v.dim };
 	if (v.scalar != null) return { kind: 'point', value: v.scalar, dim: v.dim };
 	const samples = v.samples as Float64Array;

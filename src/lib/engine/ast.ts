@@ -47,5 +47,9 @@ export function astText(node: Node): string {
 			const step = node.step ? ` ${astText(node.step)}` : '';
 			return `(range ${astText(node.lo)} ${astText(node.hi)}${step})`;
 		}
+		case 'scenario': {
+			const coords = node.coords.map((c) => `${c.label}: ${astText(c.value)}`).join(' ');
+			return `(scenario[${node.axis}] ${coords})`;
+		}
 	}
 }

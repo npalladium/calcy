@@ -8,6 +8,15 @@
 // A dimension signature: base-dim name -> exponent. Zero exponents omitted.
 export type Dimension = Record<string, number>;
 
+// A scenario axis: a named, ordered set of labelled coordinates. A value gains
+// one or more axes (see `Value.axes`); each axis multiplies the value's shape
+// into a grid of `cells`. Distinct from `dim` (units) and from `list` (a
+// reducer input) — an axis is labelled *output*. See docs/plans/scenarios.md.
+export interface Axis {
+	name: string; // 'case', 'geo', …
+	coords: string[]; // ordered labels: ['low', 'base', 'high']
+}
+
 // Optional parametric identity carried by certain distribution constructors
 // (e.g. `beta(a, b)`) so downstream functions like `update()` can apply an
 // exact conjugate update without reverse-engineering the prior shape. Kept
@@ -63,6 +72,13 @@ export interface Value {
 	// dimension cancels (rate × time → count), since then there is no clean typed
 	// unit to show. See [unitsCancel] / [composeHint] in eval.ts.
 	unitHint?: UnitHint;
+	// Scenario axes carried by this value. When present, the value is a grid: it
+	// holds `cells` (one full Value per coord-combination, row-major over `axes`)
+	// instead of its own scalar/samples. A value with no `axes` is exactly
+	// today's scalar/samples value (zero-cost). Every cell shares this value's
+	// `dim`. See docs/plans/scenarios.md.
+	axes?: Axis[];
+	cells?: Value[]; // row-major over `axes`; length = ∏ axes[i].coords.length
 }
 
 // A display-unit choice: how to render a base-unit magnitude. Structurally the

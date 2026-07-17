@@ -43,6 +43,7 @@ describe('FUNCTIONS catalogue covers exactly the user-callable functions', () =>
 		'where',
 		'given',
 		'convert',
+		'scenario',
 		'bin',
 		'+',
 		'-',
