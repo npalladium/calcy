@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { evalNode } from '../src/lib/engine/eval';
-import { correlateTo } from '../src/lib/engine/mc';
+import { correlateJoint, correlateTo } from '../src/lib/engine/mc';
 import { makeCtx, parse, seededFns, values } from './helpers';
 
 // correlate(reference, marginal, r) — single-line pairwise coupling. Iman–Conover
@@ -67,6 +67,57 @@ describe('correlateTo (Iman–Conover, reference fixed)', () => {
     expect(spearman(x, correlateTo(x, y, 0.6, fns))).toBeCloseTo(0.6, 1);
     expect(spearman(x, correlateTo(x, y, -0.5, fns))).toBeCloseTo(-0.5, 1);
     expect(Math.abs(spearman(x, correlateTo(x, y, 0, fns)))).toBeLessThan(0.05);
+  });
+});
+
+describe('correlateJoint (Iman–Conover, symmetric N-variable)', () => {
+  const fns = seededFns(40000, 13);
+  const draw = (n: number, seed: number): Float64Array => {
+    const f = seededFns(n, seed);
+    const out = new Float64Array(n);
+    for (let i = 0; i < n; i++) out[i] = f.gaussian();
+    return out;
+  };
+
+  it('preserves every marginal exactly (each column is a permutation of its input)', () => {
+    const cols = [draw(40000, 1), draw(40000, 2), draw(40000, 3)];
+    const target = [
+      [1, 0.6, -0.3],
+      [0.6, 1, 0.1],
+      [-0.3, 0.1, 1]
+    ];
+    const out = correlateJoint(cols, target, fns);
+    for (let j = 0; j < cols.length; j++) expect(sortedCopy(out[j])).toEqual(sortedCopy(cols[j]));
+  });
+
+  it('induces the requested pairwise rank correlations', () => {
+    const cols = [draw(40000, 11), draw(40000, 22), draw(40000, 33)];
+    const target = [
+      [1, 0.6, -0.3],
+      [0.6, 1, 0.1],
+      [-0.3, 0.1, 1]
+    ];
+    const out = correlateJoint(cols, target, fns);
+    expect(spearman(out[0], out[1])).toBeCloseTo(0.6, 1);
+    expect(spearman(out[0], out[2])).toBeCloseTo(-0.3, 1);
+    expect(spearman(out[1], out[2])).toBeCloseTo(0.1, 1);
+  });
+
+  it('returns a single column unchanged (nothing to couple)', () => {
+    const c = draw(100, 9);
+    const out = correlateJoint([c], [[1]], fns);
+    expect(out[0]).toBe(c);
+  });
+
+  it('throws on a target that is not positive definite', () => {
+    const cols = [draw(1000, 1), draw(1000, 2), draw(1000, 3)];
+    // r12 = r13 = 0.9 but r23 = -0.9 is jointly impossible.
+    const bad = [
+      [1, 0.9, 0.9],
+      [0.9, 1, -0.9],
+      [0.9, -0.9, 1]
+    ];
+    expect(() => correlateJoint(cols, bad, fns)).toThrow(/positive definite/);
   });
 });
 

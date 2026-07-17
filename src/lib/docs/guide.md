@@ -71,12 +71,23 @@ median(visitors)            # the middle value
 ### Compare a few scenarios
 
 Sometimes you don't have one number—you have a few named cases you want to see
-side by side. `scenario[name](...)` holds them all at once, and any maths you do
-carries every case through:
+side by side. `scenario(...)` holds them all at once (the cases are called
+`case` unless you name the axis yourself), and any maths you do carries every
+case through:
 
 ```
-price = scenario[case](low: 8, base: 10, high: 14) $   # → case: low=$8.00, base=$10.00, high=$14.00
-demand = scenario[case](low: 1200, base: 1000, high: 700)   # → case: low=1.2K, base=1K, high=700
+price = scenario(low: 8, base: 10, high: 14) $   # → case: low=$8.00, base=$10.00, high=$14.00
+```
+
+When several numbers vary across the same cases, line them up in a `scenario:`
+table—one row per variable, one column per case. The `#` row names the cases,
+and everything downstream still carries them all:
+
+```
+scenario case:
+  #         low    base   high
+  price  = 8      10     14     $
+  demand = 1200   1000   700
 revenue = price * demand   # → case: low=$9,600.00, base=$10,000.00, high=$9,800.00
 ```
 
@@ -102,6 +113,25 @@ takings = sales * fee
 The last number (−1 to 1) is how tightly they move: `0.6` together, `-0.6`
 apart, `0` not at all. Each keeps its own shape—only the pairing between them
 changes.
+
+When more than two things move together, group them in a `correlate:` block:
+define each one on its own indented line, then name the pairs that are linked.
+Anything you don't mention stays independent.
+
+```
+correlate:
+  traffic    = pert(10k, 50k, 100k) req
+  conversion = normal(0.02, 0.005)
+  spend      = 100 to 300 $
+
+  cor(traffic, conversion) = 0.5
+  cor(traffic, spend)      = -0.3
+revenue = traffic * conversion * spend
+```
+
+Every variable still keeps its own shape; only the pairing between them changes.
+Because the block defines them together, a linked variable never slips into the
+rest of your sheet in an uncoupled form.
 
 ### Rates over time
 

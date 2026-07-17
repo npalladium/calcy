@@ -932,9 +932,13 @@ class Parser {
       return { type: 'list', items };
     }
     if (t.kind === 'ident') {
-      // `scenario[axis](label: expr, …)` — the inline scenario constructor.
-      // Detected by the `scenario` keyword immediately followed by `[`.
-      if (t.value === 'scenario' && this.toks[this.pos + 1]?.kind === 'lbrack') {
+      // `scenario[axis](label: expr, …)` — the inline scenario constructor,
+      // or `scenario(…)` with the axis name defaulting to `case`. Detected by
+      // the `scenario` keyword immediately followed by `[` or `(`.
+      if (
+        t.value === 'scenario' &&
+        (this.toks[this.pos + 1]?.kind === 'lbrack' || this.toks[this.pos + 1]?.kind === 'lparen')
+      ) {
         return this.parseScenario();
       }
       // Percentile spec: `p10: 5, p90: 50` fits a distribution to two named
@@ -980,12 +984,19 @@ class Parser {
   // axis and coord labels are always explicit (no positional/anonymous form).
   private parseScenario(): Node {
     this.next(); // 'scenario'
-    this.expect('lbrack');
-    const axisTok = this.peek();
-    if (axisTok?.kind !== 'ident')
-      throw new Error('scenario needs an axis name, e.g. scenario[case](low: 8, base: 10)');
-    this.next();
-    this.expect('rbrack');
+    // `[axis]` is optional; when omitted the axis name defaults to `case`, the
+    // dominant convention for a low/base/high what-if. `scenario[geo](…)` still
+    // names any other axis explicitly.
+    let axis = 'case';
+    if (this.peek()?.kind === 'lbrack') {
+      this.next();
+      const axisTok = this.peek();
+      if (axisTok?.kind !== 'ident')
+        throw new Error('scenario needs an axis name, e.g. scenario[case](low: 8, base: 10)');
+      this.next();
+      this.expect('rbrack');
+      axis = axisTok.value;
+    }
     this.expect('lparen');
     const coords: { label: string; value: Node }[] = [];
     if (this.peek()?.kind !== 'rparen') {
@@ -1012,10 +1023,10 @@ class Parser {
     const seen = new Set<string>();
     for (const c of coords) {
       if (seen.has(c.label))
-        throw new Error(`scenario axis '${axisTok.value}': duplicate coord '${c.label}'`);
+        throw new Error(`scenario axis '${axis}': duplicate coord '${c.label}'`);
       seen.add(c.label);
     }
-    return { type: 'scenario', axis: axisTok.value, coords };
+    return { type: 'scenario', axis, coords };
   }
 
   // Parse a call's argument list up to and including the closing paren (the
